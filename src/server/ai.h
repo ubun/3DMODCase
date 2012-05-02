@@ -54,12 +54,6 @@ public:
     virtual void askForGuanxing(const QList<int> &cards, QList<int> &up, QList<int> &bottom, bool up_only) = 0;
     virtual void filterEvent(TriggerEvent event, ServerPlayer *player, const QVariant &data);
 
-    // Disha
-    virtual const Card *askForCover(const CardEffectStruct &effect) = 0;
-    virtual const Card *askForRebound(const DamageStruct &damage) = 0;
-    virtual const Card *askForRob(const DamageStruct &damage) = 0;
-    virtual const Card *askForSuddenStrike(ServerPlayer *player) = 0;
-
 protected:
     Room *room;
     ServerPlayer *self;
@@ -90,12 +84,6 @@ public:
     virtual void askForGuanxing(const QList<int> &cards, QList<int> &up, QList<int> &bottom, bool up_only);
 
     virtual bool useCard(const Card *card);
-
-    // Disha
-    virtual const Card *askForCover(const CardEffectStruct &effect);
-    virtual const Card *askForRebound(const DamageStruct &damage);
-    virtual const Card *askForRob(const DamageStruct &damage);
-    virtual const Card *askForSuddenStrike(ServerPlayer *player);
 
 private:
     ResponseSkill *response_skill;
@@ -128,12 +116,6 @@ public:
     virtual void filterEvent(TriggerEvent event, ServerPlayer *player, const QVariant &data);
 
     LuaFunction callback;
-
-    // Disha
-    virtual const Card *askForCover(const CardEffectStruct &effect);
-    virtual const Card *askForRebound(const DamageStruct &damage);
-    virtual const Card *askForRob(const DamageStruct &damage);
-    virtual const Card *askForSuddenStrike(ServerPlayer *player);
 
 private:
     void pushCallback(lua_State *L, const char *function_name);

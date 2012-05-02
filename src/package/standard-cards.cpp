@@ -49,7 +49,7 @@ void Slash::use(Room *room, ServerPlayer *source, const QList<ServerPlayer *> &t
 void Slash::onEffect(const CardEffectStruct &card_effect) const{
     Room *room = card_effect.from->getRoom();
     if(card_effect.from->hasFlag("drank")){
-        this->setFlags("drank");
+        room->setCardFlag(this, "drank");
         room->setPlayerFlag(card_effect.from, "-drank");
     }
 
@@ -60,10 +60,11 @@ void Slash::onEffect(const CardEffectStruct &card_effect) const{
 
     effect.to = card_effect.to;
     effect.drank = this->hasFlag("drank");
+
     room->slashEffect(effect);
 }
 
-bool Slash::targetsFeasible(const QList<const Player *> &targets, const Player *Self) const{
+bool Slash::targetsFeasible(const QList<const Player *> &targets, const Player *) const{
     return !targets.isEmpty();
 }
 
@@ -93,19 +94,6 @@ bool Slash::targetFilter(const QList<const Player *> &targets, const Player *to_
         distance_limit = false;
     }
 
-    if(Self->hasSkill("huxiao") && isRed()){
-        slash_targets ++;
-    }
-
-    if(Self->hasSkill("longyin") && isBlack()){
-        distance_limit = false;
-    }
-
-    if(Self->hasSkill("juelu") && Self->isLastHandCard(this)){
-        distance_limit = false;
-        slash_targets =2;
-    }
-
     return Self->canSlash(to_select, distance_limit);
 }
 
@@ -132,7 +120,7 @@ QString Peach::getSubtype() const{
     return "recover_card";
 }
 
-QString Peach::getEffectPath(bool is_male) const{
+QString Peach::getEffectPath(bool ) const{
     return Card::getEffectPath();
 }
 
@@ -190,7 +178,7 @@ public:
                     draw_card = true;
                 else{
                     QString prompt = "double-sword-card:" + effect.from->getGeneralName();
-                    const Card *card = room->askForCard(effect.to, ".", prompt);
+                    const Card *card = room->askForCard(effect.to, ".", prompt, QVariant(), CardDiscarded);
                     if(card){
                         room->throwCard(card);
                     }else
@@ -219,7 +207,7 @@ public:
         events << SlashEffect;
     }
 
-    virtual bool trigger(TriggerEvent event, ServerPlayer *player, QVariant &data) const{
+    virtual bool trigger(TriggerEvent , ServerPlayer *, QVariant &data) const{
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
         effect.to->addMark("qinggang");
 
@@ -252,7 +240,7 @@ public:
             return false;
 
         Room *room = player->getRoom();
-        const Card *card = room->askForCard(player, "slash", "blade-slash:" + effect.to->objectName());
+        const Card *card = room->askForCard(player, "slash", "blade-slash:" + effect.to->objectName(), QVariant(), NonTrigger);
         if(card){
             // if player is drank, unset his flag
             if(player->hasFlag("drank"))
@@ -286,7 +274,7 @@ public:
         return Slash::IsAvailable(player);
     }
 
-    virtual bool isEnabledAtResponse(const Player *player, const QString &pattern) const{
+    virtual bool isEnabledAtResponse(const Player *, const QString &pattern) const{
         return  pattern == "slash";
     }
 
@@ -368,19 +356,19 @@ public:
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
 
         Room *room = player->getRoom();
-        CardStar card = room->askForCard(player, "@axe", "@axe:" + effect.to->objectName(), data);
+        CardStar card = room->askForCard(player, "@axe", "@axe:" + effect.to->objectName(),data, CardDiscarded);
         if(card){
-            QStringList list_str;
-            foreach(int id, card->getSubcards()){
-                list_str << QString::number(id) ;
-            }
-            LogMessage log;
-            log.type = "$DiscardCard";
-            log.from = player;
-            log.card_str = list_str.join("+");
-            room->sendLog(log);
+            QList<int> card_ids = card->getSubcards();
+            foreach(int card_id, card_ids){
+                LogMessage log;
+                log.type = "$DiscardCard";
+                log.from = player;
+                log.card_str = QString::number(card_id);
 
-            log.card_str.clear();
+                room->sendLog(log);
+            }
+
+            LogMessage log;
             log.type = "#AxeSkill";
             log.from = player;
             log.to << effect.to;
@@ -411,19 +399,19 @@ Halberd::Halberd(Suit suit, int number)
 class KylinBowSkill: public WeaponSkill{
 public:
     KylinBowSkill():WeaponSkill("kylin_bow"){
-        events << DamageProceed;;
+        events << DamageProceed;
     }
 
     virtual bool trigger(TriggerEvent , ServerPlayer *player, QVariant &data) const{
         DamageStruct damage = data.value<DamageStruct>();
 
         QStringList horses;
-        if(damage.card && damage.card->inherits("Slash")){
-            if(damage.to->getDefensiveHorse())
-                horses << "dhorse";
-            if(damage.to->getOffensiveHorse())
-                horses << "ohorse";
-        }
+    if(damage.card && damage.card->inherits("Slash") && !damage.chain){
+        if(damage.to->getDefensiveHorse())
+            horses << "dhorse";
+        if(damage.to->getOffensiveHorse())
+            horses << "ohorse";
+
         if(horses.isEmpty())
             return false;
 
@@ -438,9 +426,10 @@ public:
             horse_type = horses.first();
 
         if(horse_type == "dhorse")
-            room->throwCard(damage.to->getDefensiveHorse());
+            room->throwCard(damage.to->getDefensiveHorse(), damage.to);
         else if(horse_type == "ohorse")
-            room->throwCard(damage.to->getOffensiveHorse());
+            room->throwCard(damage.to->getOffensiveHorse(), damage.to);
+    }
 
         return false;
     }
@@ -521,25 +510,11 @@ void AmazingGrace::use(Room *room, ServerPlayer *source, const QList<ServerPlaye
     room->fillAG(card_ids);
 
     QVariantList ag_list;
-    foreach(int card_id, card_ids)
+    foreach(int card_id, card_ids){
+        room->setCardFlag(Sanguosha->getCard(card_id), "visible");
         ag_list << card_id;
-    room->setTag("AmazingGrace", ag_list);
-
-    foreach(ServerPlayer *yangxiu, players){
-        if(yangxiu->hasSkill("danlao") && yangxiu->askForSkillInvoke("danlao")){
-            yangxiu->tag["Danlao"] = this->getEffectiveId();
-
-            room->playSkillEffect(objectName());
-            LogMessage log;
-            log.type = "#DanlaoAvoid";
-            log.from = yangxiu;
-            log.arg = this->objectName();
-            log.arg2 = "danlao";
-            room->sendLog(log);
-
-            yangxiu->drawCards(1);
-        }
     }
+    room->setTag("AmazingGrace", ag_list);
 
     GlobalEffect::use(room, source, players);
 
@@ -674,7 +649,7 @@ bool Collateral::isAvailable(const Player *player) const{
     return false;
 }
 
-bool Collateral::targetsFeasible(const QList<const Player *> &targets, const Player *Self) const{
+bool Collateral::targetsFeasible(const QList<const Player *> &targets, const Player *) const{
     return targets.length() == 2;
 }
 
@@ -707,12 +682,12 @@ void Collateral::use(Room *room, ServerPlayer *source, const QList<ServerPlayer 
     if(on_effect){
         QString prompt = QString("collateral-slash:%1:%2")
                 .arg(source->objectName()).arg(victims.first()->objectName());
-        const Card *slash = room->askForCard(killer, "slash", prompt);
+        const Card *slash = room->askForCard(killer, "slash", prompt, QVariant(), NonTrigger);
         if (victims.first()->isDead()){
             if (source->isDead()){
                 if(killer->isAlive() && killer->getWeapon()){
                     int card_id = weapon->getId();
-                    room->throwCard(card_id);
+                    room->throwCard(card_id, source);
                 }
             }
             else
@@ -734,7 +709,7 @@ void Collateral::use(Room *room, ServerPlayer *source, const QList<ServerPlayer 
                 else{
                     if(killer->getWeapon()){
                         int card_id = weapon->getId();
-                        room->throwCard(card_id);
+                        room->throwCard(card_id, source);
                     }
                 }
             }
@@ -900,7 +875,7 @@ void Dismantlement::onEffect(const CardEffectStruct &effect) const{
 
     Room *room = effect.to->getRoom();
     int card_id = room->askForCardChosen(effect.from, effect.to, "hej", objectName());
-    room->throwCard(card_id);
+    room->throwCard(card_id, room->getCardPlace(card_id) == Player::Judging ? NULL : effect.to);
 
     LogMessage log;
     log.type = "$Dismantlement";
@@ -977,7 +952,7 @@ void Lightning::takeEffect(ServerPlayer *target) const{
 class IceSwordSkill: public WeaponSkill{
 public:
     IceSwordSkill():WeaponSkill("ice_sword"){
-        events << DamageProceed;;
+        events << DamageProceed;
     }
 
     virtual bool trigger(TriggerEvent , ServerPlayer *player, QVariant &data) const{
@@ -985,13 +960,14 @@ public:
 
         Room *room = player->getRoom();
 
-        if(damage.card && damage.card->inherits("Slash") && !damage.to->isNude() && player->askForSkillInvoke("ice_sword", data)){
+        if(damage.card && damage.card->inherits("Slash") && !damage.to->isNude()
+                && !damage.chain && player->askForSkillInvoke("ice_sword", data)){
             int card_id = room->askForCardChosen(player, damage.to, "he", "ice_sword");
-            room->throwCard(card_id);
+            room->throwCard(card_id, damage.to);
 
             if(!damage.to->isNude()){
                 card_id = room->askForCardChosen(player, damage.to, "he", "ice_sword");
-                room->throwCard(card_id);
+                room->throwCard(card_id, damage.to);
             }
 
             return true;
@@ -1014,7 +990,7 @@ public:
         events << SlashEffected;
     }
 
-    virtual bool trigger(TriggerEvent event, ServerPlayer *player, QVariant &data) const{
+    virtual bool trigger(TriggerEvent , ServerPlayer *player, QVariant &data) const{
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
         if(effect.slash->isBlack()){
             LogMessage log;

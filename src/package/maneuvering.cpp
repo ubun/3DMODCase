@@ -2,6 +2,8 @@
 #include "client.h"
 #include "engine.h"
 #include "carditem.h"
+#include "general.h"
+#include "room.h"
 
 NatureSlash::NatureSlash(Suit suit, int number, DamageStruct::Nature nature)
     :Slash(suit, number)
@@ -85,30 +87,7 @@ void Analeptic::onEffect(const CardEffectStruct &effect) const{
         room->setPlayerFlag(effect.to, "drank");
     }
 }
-/*
-class FanSkill: public WeaponSkill{
-public:
-    FanSkill():WeaponSkill("fan"){
-        events << SlashEffect;
-    }
 
-    virtual bool trigger(TriggerEvent , ServerPlayer *player, QVariant &data) const{
-        SlashEffectStruct effect = data.value<SlashEffectStruct>();
-        if(!effect.slash->getSkillName().isEmpty() && effect.slash->getSubcards().length() > 0)
-            return false;
-
-        if(effect.nature == DamageStruct::Normal){
-            if(player->getRoom()->askForSkillInvoke(player, objectName(), data)){
-                effect.nature = DamageStruct::Fire;
-
-                data = QVariant::fromValue(effect);
-            }
-        }
-
-        return false;
-    }
-};
-*/
 class FanSkill: public OneCardViewAsSkill{
 public:
     FanSkill():OneCardViewAsSkill("fan"){
@@ -128,15 +107,14 @@ public:
     }
 
     virtual const Card *viewAs(CardItem *card_item) const{
-        const Card *slash = card_item->getFilteredCard();
-
-        FireSlash *fslash = new FireSlash(slash->getSuit(), slash->getNumber());
-        fslash->setSkillName(objectName());
-        fslash->addSubcard(slash);
-
-        return fslash;
+        const Card *card = card_item->getCard();
+        Card *acard = new FireSlash(card->getSuit(), card->getNumber());
+        acard->addSubcard(card->getId());
+        acard->setSkillName(objectName());
+        return acard;
     }
 };
+
 
 Fan::Fan(Suit suit, int number):Weapon(suit, number, 4){
     setObjectName("fan");
@@ -198,7 +176,7 @@ public:
             }
         }else if(event == CardEffected){
             CardEffectStruct effect = data.value<CardEffectStruct>();
-            if(effect.card->inherits("SavageAssault") || effect.card->inherits("ArcheryAttack")){
+            if(effect.card->inherits("AOE")){
                 LogMessage log;
                 log.from = player;
                 log.type = "#ArmorNullify";
@@ -299,7 +277,7 @@ void FireAttack::onEffect(const CardEffectStruct &effect) const{
     QString suit_str = card->getSuitString();
     QString pattern = QString(".%1").arg(suit_str.at(0).toUpper());
     QString prompt = QString("@fire-attack:%1::%2").arg(effect.to->getGeneralName()).arg(suit_str);
-    if(room->askForCard(effect.from, pattern, prompt)){
+    if(room->askForCard(effect.from, pattern, prompt, QVariant(), CardDiscarded)){
         DamageStruct damage;
         damage.card = this;
         damage.from = effect.from;
@@ -472,7 +450,6 @@ ManeuveringPackage::ManeuveringPackage()
         card->setParent(this);
 
     type = CardPack;
-
     skills << new FanSkill;
 }
 

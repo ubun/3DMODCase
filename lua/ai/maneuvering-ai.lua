@@ -84,20 +84,16 @@ function SmartAI:searchForAnaleptic(use,enemy,slash)
 	local cards = self.player:getHandcards()
 	cards = sgs.QList2Table(cards)
 	self:fillSkillCards(cards)
+	local allcards = self.player:getCards("he")
+	allcards = sgs.QList2Table(allcards)
 
-	if (sgs.getDefense(self.player) <sgs.getDefense(enemy)) and
-		(self.player:getHandcardNum() < 1+self.player:getHp()) or
-		self.player:hasFlag("drank") then
-			return
+	if enemy:getArmor() and enemy:getArmor():objectName() == "silver_lion" then
+		return
 	end
 
-	if enemy:getArmor() then
-		if ((enemy:getArmor():objectName()) == "eight_diagram")
-			or ((enemy:getArmor():objectName()) == "silver_lion") then
-			if (self.player:getHandcardNum() <= 1+self.player:getHp()) then
-				return
-			end
-		end
+	if ((enemy:getArmor() and enemy:getArmor():objectName() == "eight_diagram") or enemy:getHandcardNum() > 2) 
+		and not ((self:isEquip("Axe") and #allcards > 4) or self.player:getHandcardNum() > 1+self.player:getHp()) then
+		return
 	end
 
 	if self.player:getPhase() == sgs.Player_Play then
@@ -268,7 +264,7 @@ function SmartAI:useCardIronChain(card, use)
 			table.insert(enemytargets, enemy)
 		end
 	end
-	if not self.player:hasSkill("wuyan") then
+	if not self.player:hasSkill("nos_wuyan") then
 		if #friendtargets > 1 then
 			if use.to then use.to:append(friendtargets[1]) end
 			if use.to then use.to:append(friendtargets[2]) end
@@ -335,7 +331,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)
 		if (self:objectiveLevel(enemy) > 3) and not enemy:isKongcheng() and not self.room:isProhibited(self.player, enemy, fire_attack)  
 			and self:damageIsEffective(enemy, sgs.DamageStruct_Fire, self.player) and self:hasTrickEffective(fire_attack, enemy)
 			and not self:cantbeHurt(enemy)
-			and not (enemy:isChained() and not self:isGoodChainTarget(enemy)) then
+			and not (enemy:isChained() and not self:isGoodChainTarget(enemy) and not self.player:hasSkill("jueqing")) then
 
 			local cards = enemy:getHandcards()
 			local success = true

@@ -1,7 +1,7 @@
 -- translation for TBdiy Package
 
 return {
-	["TBdiy"] = "贴吧diy活动",
+	["TBdiy"] = "3D初开·基包",
 	
 	["diycaoang"] = "曹昂",
 	["~diycaoang"] = "来！大不了就是一死！",
@@ -152,7 +152,7 @@ return {
 	["#diymushun"] = "挺枪迎布",
 	["illustrator:diymushun"] = " ",
 	
-	["diymingzhi"] = "明知",
+	["diymingzhi"] = "明战",
 	["$diymingzhi1"] = "明知山有虎，偏向虎山行！",
 	["$diymingzhi2"] = "不可以退缩！",
 	[":diymingzhi"] = "当你使用【杀】指定一名角色为目标后，你可猜测此【杀】是否造成伤害。若你猜对，你可摸一张牌。",

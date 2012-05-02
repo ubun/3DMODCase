@@ -147,18 +147,10 @@ int Player::getAttackRange() const{
     if(hasFlag("tianyi_success") || hasFlag("jiangchi_invoke"))
         return 1000;
 
-    if(weapon){
-        if(weapon->objectName() == "luofeng_bow")
-            return hp;
-        else if(weapon->objectName() == "tianlangh")
-            return qMax(getMark("@tianlang"), 1);
-        else
-            return weapon->getRange();
-    }
+    if(weapon)
+        return weapon->getRange();
     else if(hasSkill("zhengfeng"))
         return hp;
-    else if(hasSkill("CBZhangBa"))
-        return 3;
     else
         return 1;
 }
@@ -214,7 +206,7 @@ QString Player::getGeneralName() const{
     if(general)
         return general->objectName();
     else
-        return "";
+        return QString();
 }
 
 void Player::setGeneral2Name(const QString &general_name){
@@ -496,13 +488,15 @@ int Player::getMaxCards() const{
 
     int zongshi = 0;
     if(hasSkill("zongshi")){
-        QSet<QString> kingdom_set ;
+        QSet<QString> kingdom_set;
         if(parent()){
             foreach(const Player *player, parent()->findChildren<const Player *>()){
-                if(player->isAlive())
+                if(player->isAlive()){
                     kingdom_set << player->getKingdom();
+                }
             }
         }
+
         zongshi = kingdom_set.size();
     }
 
@@ -674,8 +668,6 @@ void Player::addHistory(const QString &name, int times){
 
 int Player::getSlashCount() const{
     return history.value("Slash", 0)
-            + history.value("PunctureSlash", 0)
-            + history.value("BloodSlash", 0)
             + history.value("ThunderSlash", 0)
             + history.value("FireSlash", 0);
 }
@@ -739,14 +731,16 @@ bool Player::isProhibited(const Player *to, const Card *card) const{
 }
 
 bool Player::canSlashWithoutCrossbow() const{
-    if(hasSkill("paoxiao") || getMark("@tianlang") == 5)
+    if(hasSkill("paoxiao"))
         return true;
 
     int slash_count = getSlashCount();
-    if(hasFlag("tianyi_success") || hasFlag("jiangchi_invoke"))
-        return slash_count < 2;
-    else
-        return slash_count < 1;
+    int valid_slash_count = 1;
+    if(hasFlag("tianyi_success"))
+        valid_slash_count++;
+    if(hasFlag("jiangchi_invoke"))
+        valid_slash_count++;
+    return slash_count < valid_slash_count;
 }
 
 void Player::jilei(const QString &type){
@@ -834,7 +828,7 @@ void Player::setStatistics(StatisticsStruct *statistics){
 
 bool Player::isCaoCao() const{
     QString general_name = getGeneralName();
-    return general_name == "caocao" || general_name == "shencaocao" || general_name == "shencc";
+    return general_name == "caocao" || general_name == "shencaocao" || general_name == "weiwudi";
 }
 
 void Player::copyFrom(Player* p)

@@ -28,13 +28,11 @@ Dashboard::Dashboard(QGraphicsItem *button_widget)
         button_widget->setParentItem(this);
 
     int middle_width = middle->rect().width();
-
     setMiddleWidth(middle_width);
 
     sort_type = 0;
 
     animations = new EffectAnimation();
-
 }
 
 void Dashboard::createLeft(){
@@ -94,12 +92,12 @@ void Dashboard::createRight(){
     small_avatar->setOpacity(0.75);
 
     if(button_widget){
-            kingdom = new QGraphicsPixmapItem(button_widget);
-            kingdom->setPos(57, 0);
-        }else{
-            kingdom = new QGraphicsPixmapItem(right);
-            kingdom->setPos(91, 54);
-        }
+        kingdom = new QGraphicsPixmapItem(button_widget);
+        kingdom->setPos(57, 0);
+    }else{
+        kingdom = new QGraphicsPixmapItem(right);
+        kingdom->setPos(91, 54);
+    }
 
     ready_item = new QGraphicsPixmapItem(QPixmap("image/system/ready.png"), avatar);
     ready_item->setPos(2, 43);
@@ -360,12 +358,17 @@ QRectF Dashboard::boundingRect() const{
     return QRectF(0, 0, width, height);
 }
 
+int Dashboard::getTextureWidth() const{
+    return middle->brush().texture().width() + left_pixmap.width() + right_pixmap.width();
+}
+
 void Dashboard::setMiddleWidth(int middle_width){
     int left_width = left_pixmap.width();
     qreal middle_height = middle->rect().height();
 
     middle->setRect(0, 0, middle_width + getButtonWidgetWidth(), middle_height);
     middle->setX(left_width);
+
     if(button_widget)
         button_widget->setX(left_width + middle_width);
 
@@ -377,23 +380,17 @@ void Dashboard::setMiddleWidth(int middle_width){
 }
 
 void Dashboard::setWidth(int width){
-    if(width == 0){
-        setMiddleWidth(middle->brush().texture().width());
+    qreal left_width = left->boundingRect().width();
+    qreal right_width = right->boundingRect().width();
+    qreal button_width = getButtonWidgetWidth();
+    qreal middle_width = width - left_width - right_width - button_width;
 
-        prepareGeometryChange();
-        adjustCards();
+    setMiddleWidth(middle_width);
 
-    }else if(width > 500){
-        qreal left_width = left->boundingRect().width();
-        qreal right_width = right->boundingRect().width();
-        qreal button_width = getButtonWidgetWidth();
-        qreal middle_width = width - left_width - right_width - button_width;
+    prepareGeometryChange();
+    adjustCards();
 
-        setMiddleWidth(middle_width);
-
-        prepareGeometryChange();
-        adjustCards();
-    }
+    setX(- boundingRect().width()/2);
 }
 
 QGraphicsProxyWidget *Dashboard::addWidget(QWidget *widget, int x, bool from_left){

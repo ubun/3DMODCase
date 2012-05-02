@@ -91,6 +91,7 @@ public:
 
     virtual const Card *viewAs(CardItem *card_item) const{
         GuidaoCard *card = new GuidaoCard;
+        card->setSuit(card_item->getFilteredCard()->getSuit());
         card->addSubcard(card_item->getFilteredCard());
 
         return card;
@@ -216,7 +217,7 @@ public:
 class Leiji: public TriggerSkill{
 public:
     Leiji():TriggerSkill("leiji"){
-        events << CardAsked << CardResponsed;
+        events << CardResponsed;
         view_as_skill = new LeijiViewAsSkill;
     }
 
@@ -224,20 +225,13 @@ public:
         return 3;
     }
 
-    virtual bool trigger(TriggerEvent event, ServerPlayer *zhangjiao, QVariant &data) const{
-        if(event == CardAsked){
-            if(data.toString() == "jink")
-                zhangjiao->tag["leiji_invoke"] = true;
-        }
-        else{
-            CardStar card_star = data.value<CardStar>();
-            if(!card_star->inherits("Jink") || zhangjiao->tag["leiji_invoke"].isNull())
-                return false;
+    virtual bool trigger(TriggerEvent , ServerPlayer *zhangjiao, QVariant &data) const{
+        CardStar card_star = data.value<CardStar>();
+        if(!card_star->inherits("Jink"))
+            return false;
 
-            zhangjiao->tag["leiji_invoke"] = QVariant();
-            Room *room = zhangjiao->getRoom();
-            room->askForUseCard(zhangjiao, "@@leiji", "@leiji");
-        }
+        Room *room = zhangjiao->getRoom();
+        room->askForUseCard(zhangjiao, "@@leiji", "@leiji");
 
         return false;
     }
@@ -261,7 +255,7 @@ bool ShensuCard::targetFilter(const QList<const Player *> &targets, const Player
 }
 
 void ShensuCard::use(Room *room, ServerPlayer *source, const QList<ServerPlayer *> &targets) const{
-    room->throwCard(this);
+    room->throwCard(this, source);
 
     Slash *slash = new Slash(Card::NoSuit, 0);
     slash->setSkillName("shensu");
@@ -603,6 +597,7 @@ public:
 
 TianxiangCard::TianxiangCard()
 {
+    owner_discarded = true;
 }
 
 void TianxiangCard::onEffect(const CardEffectStruct &effect) const{
@@ -675,6 +670,7 @@ GuhuoCard::GuhuoCard(){
 bool GuhuoCard::guhuo(ServerPlayer* yuji, const QString& message) const{
     Room *room = yuji->getRoom();
     room->setTag("Guhuoing", true);
+    room->setTag("GuhuoType", this->user_string);
 
     yuji->addToPile("#guhuo_pile", this->getEffectiveId(), false);
     room->moveCardTo(this, yuji, Player::Special, false);
@@ -748,6 +744,7 @@ bool GuhuoCard::guhuo(ServerPlayer* yuji, const QString& message) const{
     room->sendLog(log);
 
     room->setTag("Guhuoing", false);
+    room->removeTag("GuhuoType");
 
     if(!success)
         room->throwCard(this);
@@ -766,7 +763,6 @@ GuhuoDialog *GuhuoDialog::GetInstance(const QString &object, bool left, bool rig
 GuhuoDialog::GuhuoDialog(const QString &object, bool left, bool right):object_name(object)
 {
     setWindowTitle(Sanguosha->translate(object));
-
     group = new QButtonGroup(this);
 
     QHBoxLayout *layout = new QHBoxLayout;

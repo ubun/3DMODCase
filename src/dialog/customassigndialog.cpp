@@ -1168,7 +1168,7 @@ void CustomAssignDialog::load()
         }
 
         if(line.startsWith("setPile:"))
-        {            
+        {
             QStringList list = line.replace("setPile:","").split(",");
             foreach(QString id,list)
             {

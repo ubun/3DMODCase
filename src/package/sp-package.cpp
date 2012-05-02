@@ -145,18 +145,20 @@ public:
             ServerPlayer *yangxiu = room->findPlayerBySkillName(objectName());
             if(!yangxiu || use.to.length() <= 1 ||
                     !use.to.contains(yangxiu) ||
-                    !use.card->inherits("TrickCard") || use.card->inherits("Collateral") || use.card->inherits("AmazingGrace") ||
+                    !use.card->inherits("TrickCard") || use.card->inherits("Collateral") ||
                     !room->askForSkillInvoke(yangxiu, objectName(), data))
                 return false;
 
             yangxiu->tag["Danlao"] = use.card->getEffectiveId();
 
             room->playSkillEffect(objectName());
+
             LogMessage log;
             log.type = "#DanlaoAvoid";
             log.from = yangxiu;
             log.arg = use.card->objectName();
             log.arg2 = objectName();
+
             room->sendLog(log);
 
             yangxiu->drawCards(1);
@@ -244,9 +246,11 @@ public:
                     log.arg2 = objectName();
                     room->sendLog(log);
                     yuanshu->throwAllEquips();
+                    DummyCard *dummy_card = new DummyCard;
                     foreach(const Card *card, handcards.toSet() - jilei_cards){
-                        room->throwCard(card);
+                        dummy_card->addSubcard(card);
                     }
+                    room->throwCard(dummy_card, yuanshu);
                 }
             }else{
                 room->askForDiscard(yuanshu, "yongsi", x, false, true);
@@ -254,7 +258,7 @@ public:
                 LogMessage log;
                 log.type = "#YongsiBad";
                 log.from = yuanshu;
-                log.arg = QString::number(x);                
+                log.arg = QString::number(x);
                 log.arg2 = objectName();
                 room->sendLog(log);
             }
@@ -372,7 +376,7 @@ public:
             QString suit_str = card->getSuitString();
             QString pattern = QString(".%1").arg(suit_str.at(0).toUpper());
             QString prompt = QString("@xiuluo:::%1").arg(suit_str);
-            if(room->askForCard(target, pattern, prompt)){
+            if(room->askForCard(target, pattern, prompt, QVariant(), CardDiscarded)){
                 room->throwCard(card);
                 once_success = true;
             }
@@ -458,7 +462,7 @@ SPPackage::SPPackage()
     sp_diaochan->addSkill("lijian");
     sp_diaochan->addSkill("biyue");
 
-    General *sp_sunshangxiang = new General(this, "sp_sunshangxiang", "shu", 3, false);
+    General *sp_sunshangxiang = new General(this, "sp_sunshangxiang", "shu", 3, false, true);
     sp_sunshangxiang->addSkill("jieyin");
     sp_sunshangxiang->addSkill("xiaoji");
 
@@ -477,21 +481,21 @@ SPPackage::SPPackage()
     sp_guanyu->addSkill("wusheng");
     sp_guanyu->addSkill(new Danji);
 
-    General *sp_caiwenji = new General(this, "sp_caiwenji", "wei", 3, false);
+    General *sp_caiwenji = new General(this, "sp_caiwenji", "wei", 3, false, true);
     sp_caiwenji->addSkill("beige");
     sp_caiwenji->addSkill("duanchang");
 
-    General *sp_machao = new General(this, "sp_machao", "qun", 4, true);
+    General *sp_machao = new General(this, "sp_machao", "qun", 4, true, true);
     sp_machao->addSkill("mashu");
     sp_machao->addSkill("tieji");
 
-    General *sp_jiaxu = new General(this, "sp_jiaxu", "wei", 3, true);
+    General *sp_jiaxu = new General(this, "sp_jiaxu", "wei", 3, true, true);
     sp_jiaxu->addSkill("wansha");
     sp_jiaxu->addSkill("luanwu");
     sp_jiaxu->addSkill("weimu");
     sp_jiaxu->addSkill("#@chaos-1");
 
-    General *sp_pangde = new General(this, "sp_pangde", "wei", 4, true);
+    General *sp_pangde = new General(this, "sp_pangde", "wei", 4, true, true);
     sp_pangde->addSkill("mengjin");
     sp_pangde->addSkill("mashu");
 

@@ -148,7 +148,7 @@ function SmartAI:useCardSlash(card, use)
 	for _, target in ipairs(targets) do
 		local canliuli = false
 		for _, friend in ipairs(self.friends_noself) do
-			if self:canLiuli(target, friend) and self:slashIsEffective(card, friend) then canliuli = true end
+			if self:canLiuli(target, friend) and self:slashIsEffective(card, friend) and #target > 1 and friend:getHp() < 3 then canliuli = true end
 		end
 		if (self.player:canSlash(target, not no_distance) or
 		(use.isDummy and self.predictedRange and (self.player:distanceTo(target) <= self.predictedRange))) and
@@ -278,6 +278,7 @@ end
 
 sgs.ai_skill_cardask["slash-jink"] = function(self, data, pattern, target)
 	local effect = data:toSlashEffect()
+	local cards = sgs.QList2Table(self.player:getHandcards())
 	if (not target or self:isFriend(target)) and effect.slash:hasFlag("jiefan-slash") then return "." end
 	if sgs.ai_skill_cardask.nullfilter(self, data, pattern, target) and not target:hasSkill("qianxi") then return "." end
 	--if not target then self.room:writeToConsole(debug.traceback()) end
@@ -399,9 +400,9 @@ function sgs.ai_weapon_value.qinggang_sword(self, enemy)
 end
 
 sgs.ai_skill_invoke.ice_sword=function(self, data)
-	local effect = data:toSlashEffect() 
-	local target = effect.to
-	if effect.slash:hasFlag("drank") then return false end	
+	local damage = data:toDamage()
+	local target = damage.to
+	if damage.card:hasFlag("drank") then return false end	
 	if self:isFriend(target) then
 		if self:isWeak(target) then return true
 		elseif target:getLostHp()<1 then return false end
@@ -499,6 +500,37 @@ function sgs.ai_weapon_value.blade(self, enemy)
 	if not enemy then return self:getCardsNum("Slash") end
 end
 
+function sgs.ai_cardsview.spear(class_name, player)
+	if class_name == "Slash" then
+		local cards = player:getCards("he")	
+		cards = sgs.QList2Table(cards)
+		for _, acard in ipairs(cards) do
+			if acard:inherits("Slash") then return end
+		end
+		local cards = player:getCards("h")	
+		cards=sgs.QList2Table(cards)
+		local newcards = {}
+		for _, card in ipairs(cards) do
+			if not card:inherits("Peach") then table.insert(newcards, card) end
+		end
+		if #newcards<(player:getHp()+1) then return nil end
+		if #newcards<2 then return nil end
+
+		local suit1 = newcards[1]:getSuitString()
+		local card_id1 = newcards[1]:getEffectiveId()
+	
+		local suit2 = newcards[2]:getSuitString()
+		local card_id2 = newcards[2]:getEffectiveId()
+
+		local suit="no_suit"
+		if newcards[1]:isBlack() == newcards[2]:isBlack() then suit = suit1 end
+
+		local card_str = ("slash:spear[%s:%s]=%d+%d"):format(suit, 0, card_id1, card_id2)
+
+		return card_str
+	end
+end
+
 local spear_skill={}
 spear_skill.name="spear"
 table.insert(sgs.ai_skills,spear_skill)
@@ -533,13 +565,13 @@ function sgs.ai_slash_weaponfilter.fan(to)
 end
 
 sgs.ai_skill_invoke.kylin_bow = function(self, data)
-	local effect = data:toSlashEffect()
+	local damage = data:toDamage()
 
-	if self:hasSkills(sgs.lose_equip_skill, effect.to) then
-		return self:isFriend(effect.to)
+	if self:hasSkills(sgs.lose_equip_skill, damage.to) then
+		return self:isFriend(damage.to)
 	end
 
-	return self:isEnemy(effect.to)
+	return self:isEnemy(damage.to)
 end
 
 function sgs.ai_slash_weaponfilter.kylin_bow(to)
@@ -561,6 +593,7 @@ sgs.ai_skill_invoke.eight_diagram = function(self, data)
 		if aplayer:getHp() < 1 and not aplayer:hasSkill("buqu") then dying = 1 break end
 	end
 	if handang and self:isFriend(handang) and dying > 0 then return false end
+	if self.player:hasFlag("dahe") then return false end
 	if sgs.hujiasource and not self:isFriend(sgs.hujiasource) then return false end
 	if sgs.lianlisource and not self:isFriend(sgs.lianlisource) then return false end
 	if self.player:hasSkill("tiandu") then return true end
@@ -623,6 +656,9 @@ sgs.ai_skill_cardask.aoe = function(self, data, pattern, target, target2, name)
 	if sgs.ai_skill_cardask.nullfilter(self, data, pattern, target) then return "." end
 	if not self:damageIsEffective(nil, nil, target) then return "." end
 	local aoe = sgs.Sanguosha:cloneCard(name, sgs.Card_NoSuit, 0)
+	local menghuo = self.room:findPlayerBySkillName("huoshou")
+	if self.player:hasSkill("wuyan") then return "." end
+	if target:hasSkill("wuyan") and not (menghuo and aoe:inherits("SavageAssault")) then return "." end
 	if self.player:hasSkill("jianxiong") and self:getAoeValue(aoe) > -10 and
 		(self.player:getHp()>1 or self:getAllPeachNum()>0) and not self.player:containsTrick("indulgence") then return "." end
 end
@@ -642,7 +678,7 @@ function SmartAI:useCardAmazingGrace(card, use)
 	if #self.friends >= #self.enemies or (self:hasSkills(sgs.need_kongcheng) and self.player:getHandcardNum() == 1)
 		or self.player:hasSkill("jizhi") then
 		use.card = card
-	elseif self.player:hasSkill("wuyan") then
+	elseif self.player:hasSkill("nos_wuyan") then
 		use.card = card
 	end
 end
@@ -653,7 +689,7 @@ sgs.ai_use_priority.AmazingGrace = 1
 
 function SmartAI:useCardGodSalvation(card, use)
 	local good, bad = 0, 0
-	if self.player:hasSkill("wuyan") and self.player:isWounded() then
+	if self.player:hasSkill("nos_wuyan") and self.player:isWounded() then
 		use.card = card
 		return
 	end
@@ -781,6 +817,7 @@ sgs.dynamic_value.damage_card.Duel = true
 
 sgs.ai_skill_cardask["duel-slash"] = function(self, data, pattern, target)
 	if sgs.ai_skill_cardask.nullfilter(self, data, pattern, target) then return "." end
+	if target:hasSkill("wuyan") then return "." end
 	if self:isFriend(target) and target:hasSkill("rende") and self.player:hasSkill("jieming") then return "." end
 	if (not self:isFriend(target) and self:getCardsNum("Slash")*2 >= target:getHandcardNum())
 		or (target:getHp() > 2 and self.player:getHp() <= 1 and self:getCardsNum("Peach") == 0 and not self.player:hasSkill("buqu")) then
@@ -821,13 +858,13 @@ function SmartAI:getValuableCard(who)
 	self:sort(self.friends, "hp")
 	local friend 
 	if #self.friends > 0 then friend = self.friends[1] end
-	if friend and self:isWeak(friend) and who:inMyAttackRange(friend) and not who:hasSkill("xuanfeng") then
+	if friend and self:isWeak(friend) and who:distanceTo(friend) <= who:getAttackRange() and not who:hasSkill("nos_xuanfeng") then
 		if weapon and who:distanceTo(friend) > 1 and not 
 			(weapon and weapon:inherits("MoonSpear") and who:hasSkill("keji") and who:getHandcardNum() > 5) then return weapon:getEffectiveId() end
 		if offhorse and who:distanceTo(friend) > 1 then return offhorse:getEffectiveId() end
 	end
 
-	if defhorse and not who:hasSkill("xuanfeng") then
+	if defhorse and not who:hasSkill("nos_xuanfeng") then
 		for _,friend in ipairs(self.friends) do
 			if friend:distanceTo(who) == friend:getAttackRange()+1 then
 				return defhorse:getEffectiveId()
@@ -835,7 +872,7 @@ function SmartAI:getValuableCard(who)
 		end
 	end
 
-	if armor and self:evaluateArmor(armor,who)>3 and not who:hasSkill("xuanfeng") then
+	if armor and self:evaluateArmor(armor,who)>3 and not who:hasSkill("nos_xuanfeng") then
 		return armor:getEffectiveId()
 	end
 
@@ -886,7 +923,7 @@ end
 
 function SmartAI:useCardSnatchOrDismantlement(card, use)
 	local name = card:objectName()
-	if self.player:hasSkill("wuyan") then return end
+	if self.player:hasSkill("nos_wuyan") then return end
 	local players = self.room:getOtherPlayers(self.player)
 	local tricks
 	players = self:exclude(players, card)
@@ -907,7 +944,7 @@ function SmartAI:useCardSnatchOrDismantlement(card, use)
 	end
 
 	self:sort(self.enemies,"defense")
-	if sgs.getDefense(self.enemies[1]) >= 8 then self:sort(self.enemies, "threat") end
+	if #self.enemies > 0 and sgs.getDefense(self.enemies[1]) >= 8 then self:sort(self.enemies, "threat") end
 	local enemies = self:exclude(self.enemies, card)
 	self:sort(self.friends_noself,"defense")
 	local friends = self:exclude(self.friends_noself, card)
@@ -949,7 +986,7 @@ function SmartAI:useCardSnatchOrDismantlement(card, use)
 			return
 		end
 		if self:isEquip("SilverLion", friend) and self:hasTrickEffective(card, friend) and 
-		friend:isWounded() and (friend:hasSkill("benghuai") or (friend:getHp() < 4 and not friend:hasSkill("longhun"))) then
+		friend:isWounded() and not self:hasSkills("longhun|duanliang|qixi|guidao",friend) then
 			hasLion = true
 			target = friend
 		end
@@ -1047,7 +1084,7 @@ end
 sgs.dynamic_value.control_card.Dismantlement = true
 
 function SmartAI:useCardCollateral(card, use)
-	if self.player:hasSkill("wuyan") then return end
+	if self.player:hasSkill("nos_wuyan") then return end
 	self:sort(self.enemies,"threat")
 
 	for _, friend in ipairs(self.friends_noself) do
@@ -1105,7 +1142,7 @@ sgs.ai_card_intention.Collateral = function(card, from, tos)
 		sgs.updateIntention(from, tos[1], 80)
 	elseif sgs.compareRoleEvaluation(tos[1], "rebel", "loyalist") == sgs.compareRoleEvaluation(tos[2], "rebel", "loyalist") then
 		sgs.updateIntention(from, tos[2], 80)
-	elseif from:getWeapon() and from:inMyAttackRange(tos[2]) then
+	elseif from:getWeapon() and from:distanceTo(tos[2]) <= from:getAttackRange() then
 		sgs.updateIntention(from, tos[1], 80)
 	elseif tos[1]:isKongcheng() then
 		sgs.updateIntention(from, tos[1], 80)
@@ -1119,7 +1156,7 @@ sgs.ai_skill_cardask["collateral-slash"] = function(self, data, pattern, target,
 	if self:needBear() then return "." end
 	if target and target2 and not self:hasSkills(sgs.lose_equip_skill) and self:isEnemy(target2) then
 		for _, slash in ipairs(self:getCards("Slash")) do
-			if self:slashIsEffective(slash, target) then 
+			if self:slashIsEffective(slash, target2) then 
 				return slash:toString()
 			end 
 		end

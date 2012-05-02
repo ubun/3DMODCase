@@ -3,7 +3,6 @@
 #include "skill.h"
 #include "package.h"
 #include "client.h"
-#include "settings.h"
 
 #include <QSize>
 #include <QFile>
@@ -158,18 +157,18 @@ QString General::getSkillDescription() const{
 }
 
 void General::lastWord() const{
-    QString filename = QString("audio/death/%1%2.ogg").arg(Config.value("EffectEdition").toString()).arg(objectName());
+    QString filename = QString("audio/death/%1.ogg").arg(objectName());
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)){
         QStringList origin_generals = objectName().split("_");
         if(origin_generals.length()>1)
-            filename = QString("audio/death/%1%2.ogg").arg(Config.value("EffectEdition").toString()).arg(origin_generals.at(1));
+            filename = QString("audio/death/%1.ogg").arg(origin_generals.at(1));
     }
     if(!file.open(QIODevice::ReadOnly) && objectName().endsWith("f")){
         QString origin_general = objectName();
         origin_general.chop(1);
         if(Sanguosha->getGeneral(origin_general))
-            filename = QString("audio/death/%1%2.ogg").arg(Config.value("EffectEdition").toString()).arg(origin_general);
+            filename = QString("audio/death/%1.ogg").arg(origin_general);
     }
     Sanguosha->playEffect(filename);
 }

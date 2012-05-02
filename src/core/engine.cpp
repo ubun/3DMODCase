@@ -7,6 +7,9 @@
 #include "lua.hpp"
 #include "banpair.h"
 #include "audio.h"
+#include "protocol.h"
+#include "jsonutils.h"
+#include "structs.h"
 
 #include <QFile>
 #include <QTextStream>
@@ -16,10 +19,6 @@
 #include <QApplication>
 
 Engine *Sanguosha = NULL;
-
-extern "C" {
-    int luaopen_sgs(lua_State *);
-}
 
 void Engine::addPackage(const QString &name){
     Package *pack = PackageAdder::packages()[name];
@@ -37,64 +36,26 @@ void Engine::addScenario(const QString &name){
         qWarning("Scenario %s cannot be loaded!", qPrintable(name));
 }
 
+static inline QVariant GetConfigFromLuaState(lua_State *L, const char *key){
+    return GetValueFromLuaState(L, "config", key);
+}
+
 Engine::Engine()
 {
     Sanguosha = this;
 
-    QStringList package_names;
-    package_names << "StandardCard"
-                  << "StandardExCard"
-                  << "Maneuvering"
-                  << "SPCard"
-                  << "YitianCard"
-                  << "Nostalgia"
-                  << "Joy"
-                  << "Disaster"
-                  << "JoyEquip"
-                  << "DishaCard"
-                  << "QHSEquip"
-                  << "Hide"
+    lua = CreateLuaState();
+    DoLuaScript(lua, "lua/config.lua");
 
-                  << "Standard"
-                  << "Wind"
-                  << "Fire"
-                  << "Thicket"
-                  << "Mountain"
-                  << "God"
-                  << "SP"
-                  << "YJCM"
-                  << "YJCM2012"
-                  << "Special3v3"
-                  << "BGM"
-                  << "Yitian"
-                  << "Wisdom"
-                  << "Huangjin"
-                  << "Ghost"
-                  << "QHS"
-                  << "YJ1st"
-                  << "YJ3rd"
-                  << "TBdiy"
-                  << "Yan"
-                  << "ChangbanSlope"
-                  << "Test" ;
-
+    QStringList package_names = GetConfigFromLuaState(lua, "package_names").toStringList();
     foreach(QString name, package_names)
         addPackage(name);
 
-    QStringList scene_names;
-    scene_names << "Guandu"
-                << "Fancheng"
-                << "Couple"
-                << "Zombie"
-                << "Impasse"
-                << "Custom";
-
-    for(int i=1; i<=21; i++){
-        scene_names << QString("MiniScene_%1").arg(i, 2, 10, QChar('0'));
-    }
-
+    QStringList scene_names = GetConfigFromLuaState(lua, "scene_names").toStringList();
     foreach(QString name, scene_names)
         addScenario(name);
+
+    DoLuaScript(lua, "lua/sanguosha.lua");
 
     // available game modes
     modes["02p"] = tr("2 players");
@@ -104,7 +65,6 @@ Engine::Engine()
     modes["04p"] = tr("4 players");
     modes["04_1v3"] = tr("4 players (Hulao Pass)");
     modes["05p"] = tr("5 players");
-    modes["05_2v3"] = tr("5 players (Changban Slope)");
     modes["06p"] = tr("6 players");
     modes["06pd"] = tr("6 players (2 renegades)");
     modes["06_3v3"] = tr("6 players (3v3)");
@@ -120,12 +80,7 @@ Engine::Engine()
 
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(deleteLater()));
 
-    QString error_msg;
-    lua = createLuaState(false, error_msg);
-    if(lua == NULL){
-        QMessageBox::warning(NULL, tr("Lua script error"), error_msg);
-        exit(1);
-    }
+
 
     foreach(QString ban, getBanPackages()){
         addBanPackage(ban);
@@ -135,29 +90,6 @@ Engine::Engine()
         Skill *mutable_skill = const_cast<Skill *>(skill);
         mutable_skill->initMediaSource();
     }
-}
-
-lua_State *Engine::createLuaState(bool load_ai, QString &error_msg){
-    lua_State *L = luaL_newstate();
-    luaL_openlibs(L);
-
-    luaopen_sgs(L);
-
-    int error = luaL_dofile(L, "sanguosha.lua");
-    if(error){
-        error_msg = lua_tostring(L, -1);
-        return NULL;
-    }
-
-    if(load_ai){
-        error = luaL_dofile(L, "lua/ai/smart-ai.lua");
-        if(error){
-            error_msg = lua_tostring(L, -1);
-            return NULL;
-        }
-    }
-
-    return L;
 }
 
 lua_State *Engine::getLuaState() const{
@@ -333,10 +265,6 @@ int Engine::getGeneralCount(bool include_banned) const{
     return total;
 }
 
-QList<Card *> Engine::getCards() const{
-    return cards;
-}
-
 const Card *Engine::getCard(int index) const{
     if(index < 0 || index >= cards.length())
         return NULL;
@@ -365,7 +293,7 @@ SkillCard *Engine::cloneSkillCard(const QString &name) const{
 }
 
 QString Engine::getVersionNumber() const{
-    return "20120405";
+    return GetConfigFromLuaState(lua, "version").toString();
 }
 
 QString Engine::getVersion() const{
@@ -378,11 +306,11 @@ QString Engine::getVersion() const{
 }
 
 QString Engine::getVersionName() const{
-    return tr("Taqing");
+    return GetConfigFromLuaState(lua, "version_name").toString();
 }
 
 QString Engine::getMODName() const{
-    return "FolkExtensionMod_ver_0.48";
+    return GetConfigFromLuaState(lua, "mod_name").toString();
 }
 
 QStringList Engine::getExtensions() const{
@@ -400,7 +328,7 @@ QStringList Engine::getExtensions() const{
 QStringList Engine::getKingdoms() const{
     static QStringList kingdoms;
     if(kingdoms.isEmpty())
-        kingdoms << "wei" << "shu" << "wu" << "qun" << "yan" << "god";
+        kingdoms = GetConfigFromLuaState(lua, "kingdoms").toStringList();
 
     return kingdoms;
 }
@@ -408,12 +336,20 @@ QStringList Engine::getKingdoms() const{
 QColor Engine::getKingdomColor(const QString &kingdom) const{
     static QMap<QString, QColor> color_map;
     if(color_map.isEmpty()){
-        color_map["wei"] = QColor(0x54, 0x79, 0x98);
-        color_map["shu"] = QColor(0xD0, 0x79, 0x6C);
-        color_map["wu"] = QColor(0x4D, 0xB8, 0x73);
-        color_map["qun"] = QColor(0x8A, 0x80, 0x7A);
-        color_map["yan"] = QColor(0x77, 0x54, 0x9A);
-        color_map["god"] = QColor(0x96, 0x94, 0x3D);
+        foreach(QString k, getKingdoms()){
+            QString color_str = GetConfigFromLuaState(lua,  ("color_" + k).toAscii()).toString();
+            QRegExp rx("#?([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})");
+            if(rx.exactMatch(color_str)){
+                QStringList results = rx.capturedTexts();
+                int red = results.at(1).toInt(NULL, 16);
+                int green = results.at(2).toInt(NULL, 16);
+                int blue = results.at(3).toInt(NULL, 16);
+
+                color_map.insert(k, QColor(red, green, blue));
+            }
+        }
+
+        Q_ASSERT(!color_map.isEmpty());
     }
 
     return color_map.value(kingdom);
@@ -462,8 +398,6 @@ QString Engine::getModeName(const QString &mode) const{
         return modes.value(mode);
     else
         return tr("%1 [Scenario mode]").arg(translate(mode));
-
-    return QString();
 }
 
 int Engine::getPlayerCount(const QString &mode) const{
@@ -490,9 +424,6 @@ void Engine::getRoles(const QString &mode, char *roles) const{
         return;
     }else if(mode == "04_1v3"){
         qstrcpy(roles, "ZFFF");
-        return;
-    }else if(mode == "05_2v3"){
-        qstrcpy(roles, "ZCFFF");
         return;
     }
 
@@ -680,21 +611,17 @@ QList<int> Engine::getRandomCards() const{
     if(Config.GameMode == "06_3v3"){
         using_new_3v3 = Config.value("3v3/UsingNewMode", false).toBool();
         exclude_disaters = Config.value("3v3/ExcludeDisasters", true).toBool() ||
-                using_new_3v3;
+                            using_new_3v3;
     }
 
     if(Config.GameMode == "04_1v3")
         exclude_disaters = true;
 
-    if(Config.GameMode == "05_2v3")
-        exclude_disaters = true;
-
     QList<int> list;
     foreach(Card *card, cards){
-        if(exclude_disaters && card->inherits("Disaster"))
-            continue;
+        card->clearFlags();
 
-        if(card->inherits("AdouMark"))
+        if(exclude_disaters && card->inherits("Disaster"))
             continue;
 
         if(card->getPackage() == "Special3v3" && using_new_3v3){

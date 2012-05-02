@@ -243,12 +243,14 @@ bool TrustAI::askForSkillInvoke(const QString &, const QVariant &){
 
 QString TrustAI::askForChoice(const QString &skill_name, const QString &choice){
     const Skill *skill = Sanguosha->getSkill(skill_name);
-    if(skill)
-        return skill->getDefaultChoice(self);
-    else{
-        QStringList choices = choice.split("+");
-        return choices.at(qrand() % choices.length());
+    if(skill){
+        QString default_choice = skill->getDefaultChoice(self);
+        if(choice.contains(default_choice))
+            return default_choice;
     }
+
+    QStringList choices = choice.split("+");
+    return choices.at(qrand() % choices.length());
 }
 
 QList<int> TrustAI::askForDiscard(const QString &, int discard_num, bool optional, bool include_equip){
@@ -404,51 +406,6 @@ void TrustAI::askForGuanxing(const QList<int> &cards, QList<int> &up, QList<int>
     bottom.clear();
 }
 
-// Disha
-const Card *TrustAI::askForCover(const CardEffectStruct &effect){
-    if(self != effect.to && isFriend(effect.to) && (!self->getArmor() || self->getArmor()->objectName() != "jiaoliao")){
-        QList<const Card *> cards = self->getHandcards();
-        foreach(const Card *card, cards){
-            if(card->objectName() == "cover")
-                return card;
-        }
-    }
-    return NULL;
-}
-
-const Card *TrustAI::askForRebound(const DamageStruct &damage){
-    if(self == damage.to && !isFriend(damage.from)){
-        QList<const Card *> cards = self->getHandcards();
-        foreach(const Card *card, cards){
-            if(card->objectName() == "rebound")
-                return card;
-        }
-    }
-    return NULL;
-}
-
-const Card *TrustAI::askForSuddenStrike(ServerPlayer *player){
-    if(self != player && !isFriend(player)){
-        QList<const Card *> cards = self->getHandcards();
-        foreach(const Card *card, cards){
-            if(card->objectName() == "sudden_strike")
-                return card;
-        }
-    }
-    return NULL;
-}
-
-const Card *TrustAI::askForRob(const DamageStruct &damage){
-    if(self != damage.to && !isFriend(damage.to)){
-        QList<const Card *> cards = self->getHandcards();
-        foreach(const Card *card, cards){
-            if(card->objectName() == "rob")
-                return card;
-        }
-    }
-    return NULL;
-}
-
 LuaAI::LuaAI(ServerPlayer *player)
     :TrustAI(player), callback(0)
 {
@@ -462,12 +419,8 @@ QString LuaAI::askForUseCard(const QString &pattern, const QString &prompt){
 
     lua_State *L = room->getLuaState();
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-
-    lua_pushstring(L, __FUNCTION__);
-
+    pushCallback(L, __FUNCTION__);
     lua_pushstring(L, pattern.toAscii());
-
     lua_pushstring(L, prompt.toAscii());
 
     int error = lua_pcall(L, 3, 1, 0);

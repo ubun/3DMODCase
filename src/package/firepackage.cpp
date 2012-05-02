@@ -149,6 +149,7 @@ public:
 
 QiangxiCard::QiangxiCard(){
     once = true;
+    owner_discarded = true;
 }
 
 bool QiangxiCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const{
@@ -322,7 +323,7 @@ public:
             if(pangde->askForSkillInvoke(objectName(), data)){
                 room->playSkillEffect(objectName());
                 int to_throw = room->askForCardChosen(pangde, effect.to, "he", objectName());
-                room->throwCard(to_throw);
+                room->throwCard(to_throw, effect.to);
             }
         }
 
@@ -536,7 +537,7 @@ public:
 FirePackage::FirePackage()
     :Package("fire")
 {
-    General *xunyu, *dianwei, *wolong, *pangtong, *taishici, *yuanshao, *shuangxiong, *pangde;
+    General *xunyu, *dianwei, *wolong, *pangtong, *taishici, *yuanshao, *yanliangwenchou, *pangde;
 
     xunyu = new General(this, "xunyu", "wei", 3);
     xunyu->addSkill(new Quhu);
@@ -564,8 +565,8 @@ FirePackage::FirePackage()
     yuanshao->addSkill(new Luanji);
     yuanshao->addSkill(new Skill("xueyi$", Skill::Compulsory));
 
-    shuangxiong = new General(this, "shuangxiong", "qun");
-    shuangxiong->addSkill(new Shuangxiong);
+    yanliangwenchou = new General(this, "yanliangwenchou", "qun");
+    yanliangwenchou->addSkill(new Shuangxiong);
 
     pangde = new General(this, "pangde", "qun");
     pangde->addSkill(new Mengjin);

@@ -26,7 +26,7 @@ Photo::Photo()
     :Pixmap("image/system/photo-back.png"),
     player(NULL),
     handcard("image/system/handcard.png"),
-    chain("image/system/chain.png"), action_item(NULL), save_me_item(NULL), permanent(false),
+    action_item(NULL), save_me_item(NULL), permanent(false),
     weapon(NULL), armor(NULL), defensive_horse(NULL), offensive_horse(NULL),
     order_item(NULL), hide_avatar(false)
 {
@@ -37,6 +37,11 @@ Photo::Photo()
     back_icon->setPos(105, 67);
     back_icon->hide();
     back_icon->setZValue(1.0);
+
+    chain_icon = new Pixmap("image/system/chain.png");
+    chain_icon->setParentItem(this);
+    chain_icon->setPos(boundingRect().width() - 22, 5);
+    chain_icon->hide();
 
     progress_bar = new QProgressBar;
     progress_bar->setMinimum(0);
@@ -528,8 +533,8 @@ void Photo::updatePile(const QString &pile_name){
         button_widget = new QGraphicsProxyWidget(this);
         button_widget->setWidget(button);
         //button_widget->setPos(pos());
-        button_widget->moveBy(0, 104);
-        button_widget->resize(80, 15);
+        button_widget->moveBy(46, 68);
+        button_widget->resize(80, 16);
         //scene()->addItem(button_widget);
 
         QMenu *menu = new QMenu(button);
@@ -580,7 +585,6 @@ void Photo::updatePile(const QString &pile_name){
     }
     if(active>1)button->setText(QString(tr("Multiple")));
 
-    /*
     if(who->getMaxHP()>5)
     {
         button_widget->setPos(pos());
@@ -588,7 +592,6 @@ void Photo::updatePile(const QString &pile_name){
         button_widget->resize(16,16);
         button->setText(QString());
     }
-    */
 }
 
 void Photo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget){
@@ -665,10 +668,7 @@ void Photo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
     drawEquip(painter, defensive_horse, 2);
     drawEquip(painter, offensive_horse, 3);
 
-    // draw iron chain
-    if(player->isChained())
-        painter->drawPixmap(this->boundingRect().width() - 22, 5, chain);
-
+    chain_icon->setVisible(player->isChained());
     back_icon->setVisible(! player->faceUp());
 }
 

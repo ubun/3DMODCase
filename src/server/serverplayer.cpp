@@ -8,16 +8,19 @@
 #include "banpair.h"
 #include "lua-wrapper.h"
 
-const int ServerPlayer::S_NUM_SEMAPHORES = 4;
+using namespace QSanProtocol;
+
+const int ServerPlayer::S_NUM_SEMAPHORES = 6;
 
 ServerPlayer::ServerPlayer(Room *room)
-    : Player(room), socket(NULL), room(room),
-    ai(NULL), trust_ai(new TrustAI(this)), recorder(NULL), next(NULL)
+    : Player(room), m_isClientResponseReady(false), m_isWaitingReply(false),
+    socket(NULL), room(room),
+    ai(NULL), trust_ai(new TrustAI(this)), recorder(NULL), next(NULL), _m_clientResponse(Json::nullValue)
 {
     semas = new QSemaphore*[S_NUM_SEMAPHORES];
     for(int i=0; i< S_NUM_SEMAPHORES; i++){
         semas[i] = new QSemaphore(0);
-    }
+    }        
 }
 
 void ServerPlayer::drawCard(const Card *card){
@@ -77,11 +80,7 @@ void ServerPlayer::throwAllEquips(){
     DummyCard *card = new DummyCard;
     foreach(const Card *equip, equips)
         card->addSubcard(equip);
-    room->throwCard(card);
-
-    CardStar card_star = card;
-    QVariant data = QVariant::fromValue(card_star);
-    room->getThread()->trigger(CardDiscarded, this, data);
+    room->throwCard(card, this);
     card->deleteLater();
 }
 
@@ -90,10 +89,7 @@ void ServerPlayer::throwAllHandCards(){
     if(card == NULL)
         return;
 
-    room->throwCard(card);
-    CardStar card_star = card;
-    QVariant data = QVariant::fromValue(card_star);
-    room->getThread()->trigger(CardDiscarded, this, data);
+    room->throwCard(card, this);
     card->deleteLater();
 }
 
@@ -127,9 +123,13 @@ void ServerPlayer::clearPrivatePiles(){
 }
 
 void ServerPlayer::bury(){
+    clearFlags();
+    clearHistory();
     throwAllCards();
     throwAllMarks();
     clearPrivatePiles();
+
+    room->clearPlayerCardLock(this);
 }
 
 void ServerPlayer::throwAllCards(){
@@ -303,6 +303,11 @@ void ServerPlayer::castMessage(const QString &message){
     }
 }
 
+void ServerPlayer::invoke(const QSanPacket* packet)
+{
+    unicast(QString(packet->toString().c_str()));
+}
+
 void ServerPlayer::invoke(const char *method, const QString &arg){
     unicast(QString("%1 %2").arg(method).arg(arg));
 }
@@ -352,6 +357,7 @@ void ServerPlayer::removeCard(const Card *card, Place place){
     case Special:{
             int card_id = card->getEffectiveId();
             QString pile_name = getPileName(card_id);
+            
             //@todo: sanity check required
             if (!pile_name.isEmpty())
                 piles[pile_name].removeOne(card_id);
@@ -481,6 +487,7 @@ bool ServerPlayer::hasNullification() const{
 
         return getHandcardNum() > getHp() && !getEquips().isEmpty();
     }
+
     if(hasSkill("qice")){
         foreach(const Card *card, handcards){
             if(card->objectName() == "nullification")
@@ -499,10 +506,10 @@ bool ServerPlayer::hasNullification() const{
         if(skill->inherits("LuaViewAsSkill")){
             const LuaViewAsSkill* luaskill = qobject_cast<const LuaViewAsSkill*>(skill);
             if(luaskill->isEnabledAtNullification(this)) return true;
-        }
-        else if(skill->inherits("TriggerSkill")){
+        }else if(skill->inherits("TriggerSkill")){
             const TriggerSkill* trigger_skill = qobject_cast<const TriggerSkill*>(skill);
-            if(trigger_skill && trigger_skill->getViewAsSkill() && trigger_skill->getViewAsSkill()->inherits("LuaViewAsSkill")){
+            if(trigger_skill && trigger_skill->getViewAsSkill()
+                    && trigger_skill->getViewAsSkill()->inherits("LuaViewAsSkill")){
                 const LuaViewAsSkill* luaskill = qobject_cast<const LuaViewAsSkill*>(trigger_skill->getViewAsSkill());
                 if(luaskill && luaskill->isEnabledAtNullification(this)) return true;
             }
@@ -585,10 +592,17 @@ void ServerPlayer::play(QList<Player::Phase> set_phases){
 
     phases = set_phases;
     while(!phases.isEmpty()){
+        PhaseChangeStruct phase_change;
+
         Phase phase = phases.takeFirst();
+        phase_change.from = this->getPhase();
+        phase_change.to = phase;
+
         setPhase(phase);
         room->broadcastProperty(this, "phase");
-        room->getThread()->trigger(PhaseChange, this);
+
+        QVariant data = QVariant::fromValue(phase_change);
+        room->getThread()->trigger(PhaseChange, this, data);
 
         if(isDead() && phase != NotActive){
             phases.clear();
@@ -661,6 +675,10 @@ void ServerPlayer::loseAllMarks(const QString &mark_name){
     if(n > 0){
         loseMark(mark_name, n);
     }
+}
+
+bool ServerPlayer::isOnline() const {
+    return getState() == "online";
 }
 
 void ServerPlayer::setAI(AI *ai) {
@@ -874,9 +892,9 @@ void ServerPlayer::gainAnExtraTurn(ServerPlayer *clearflag){
     room->removeTag("Zhichi");
     if(clearflag)
         clearflag->clearFlags();
+    room->getThread()->trigger(TurnStart, this);
     if(clearflag)
         clearflag->clearHistory();
-    room->getThread()->trigger(TurnStart, this);
     room->setCurrent(current);
 }
 
@@ -891,64 +909,4 @@ void ServerPlayer::copyFrom(ServerPlayer* sp)
 
     Player* c = b;
     c->copyFrom(a);
-}
-
-// Disha
-bool ServerPlayer::hasCover() const{
-    if(hasSkill("yanyanhu")){
-        bool has_redcard = false;
-        foreach(const Card *card, getCards("he")){
-            if(card->getSuit() == Card::Heart)
-                has_redcard = true;
-        }
-        return has_redcard;
-    }
-
-    foreach(const Card *card, handcards){
-        if(card->objectName() == "cover")
-            return true;
-    }
-    return false;
-}
-
-bool ServerPlayer::hasRebound() const{
-    foreach(const Card *card, handcards){
-        if(card->objectName() == "rebound")
-            return true;
-    }
-    return false;
-}
-
-bool ServerPlayer::hasSuddenStrike() const{
-    if(hasSkill("yanxianfeng")){
-        bool has_redcard = false;
-        foreach(const Card *card, getCards("h")){
-            if(card->getSuit() == Card::Heart)
-                has_redcard = true;
-        }
-        return has_redcard;
-    }
-
-    foreach(const Card *card, handcards){
-        if(card->objectName() == "sudden_strike")
-            return true;
-    }
-    return false;
-}
-
-bool ServerPlayer::hasRob() const{
-    if(hasSkill("yanjiefu")){
-        bool has_blackcard = false;
-        foreach(const Card *card, getCards("h")){
-            if(card->isBlack())
-                has_blackcard = true;
-        }
-        return has_blackcard;
-    }
-
-    foreach(const Card *card, handcards){
-        if(card->objectName() == "rob")
-            return true;
-    }
-    return false;
 }

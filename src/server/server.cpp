@@ -104,7 +104,6 @@ QWidget *ServerDialog::createPackageTab(){
 
     int i = 0, j = 0;
     int row = 0, column = 0;
-
     foreach(QString extension, extensions){
         const Package *package = Sanguosha->findChild<const Package *>(extension);
         if(package == NULL)
@@ -117,7 +116,6 @@ QWidget *ServerDialog::createPackageTab(){
         checkbox->setChecked(!ban_packages.contains(extension) && !forbid_package);
         checkbox->setEnabled(!forbid_package);
 
-
         extension_group->addButton(checkbox);
 
         switch(package->getType()){
@@ -125,6 +123,7 @@ QWidget *ServerDialog::createPackageTab(){
                 row = i / 5;
                 column = i % 5;
                 i++;
+
                 layout1->addWidget(checkbox, row, column+1);
                 break;
             }
@@ -133,6 +132,7 @@ QWidget *ServerDialog::createPackageTab(){
                 row = j / 5;
                 column = j % 5;
                 j++;
+
                 layout2->addWidget(checkbox, row, column+1);
                 break;
             }
@@ -142,12 +142,8 @@ QWidget *ServerDialog::createPackageTab(){
         }
     }
 
-    //layout1->addStretch();
-    //layout2->addStretch();
-
     QWidget *widget = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout;
-
     layout->addWidget(box1);
     layout->addWidget(box2);
 
@@ -266,10 +262,10 @@ QWidget *ServerDialog::createAITab(){
     ai_enable_checkbox->setChecked(Config.EnableAI);
 
     role_predictable_checkbox = new QCheckBox(tr("Role predictable"));
-    role_predictable_checkbox->setChecked(Config.value("RolePredictable", true).toBool());
+    role_predictable_checkbox->setChecked(Config.value("RolePredictable", false).toBool());
 
     ai_chat_checkbox = new QCheckBox(tr("AI Chat"));
-    ai_chat_checkbox->setChecked(Config.value("AIChat", false).toBool());
+    ai_chat_checkbox->setChecked(Config.value("AIChat", true).toBool());
 
     ai_delay_spinbox = new QSpinBox;
     ai_delay_spinbox->setMinimum(0);
@@ -498,21 +494,6 @@ void ServerDialog::edit1v1Banlist(){
     dialog->exec();
 }
 
-QGroupBox *ServerDialog::createChangbanSlopeBox(){
-    QGroupBox *box = new QGroupBox(tr("ChangbanSlope options"));
-    box->setEnabled(Config.GameMode == "05_2v3");
-
-    QVBoxLayout *vlayout = new QVBoxLayout;
-
-    RandomKingdoms_checkbox = new QCheckBox(tr("Random_Kingdoms"));
-    RandomKingdoms_checkbox->setChecked(Config.value("ChangbanSlope/Random_Kingdoms", false).toBool());
-
-    vlayout->addWidget(RandomKingdoms_checkbox);
-    box->setLayout(vlayout);
-
-    return box;
-}
-
 QGroupBox *ServerDialog::create3v3Box(){
     QGroupBox *box = new QGroupBox(tr("3v3 options"));
     box->setEnabled(Config.GameMode == "06_3v3");
@@ -581,13 +562,7 @@ QGroupBox *ServerDialog::createGameModeBox(){
             button->setObjectName(itor.key());
             mode_group->addButton(button);
 
-            if(itor.key() == "05_2v3"){
-                // add ChangbanSlope options
-                QGroupBox *box = createChangbanSlopeBox();
-                connect(button, SIGNAL(toggled(bool)), box, SLOT(setEnabled(bool)));
-
-                item_list << button << box;
-            }else if(itor.key() == "06_3v3"){
+            if(itor.key() == "06_3v3"){
                 // add 3v3 options
                 QGroupBox *box = create3v3Box();
                 connect(button, SIGNAL(toggled(bool)), box, SLOT(setEnabled(bool)));
@@ -941,10 +916,6 @@ bool ServerDialog::config(){
     Config.setValue("AnnounceIP", Config.AnnounceIP);
     Config.setValue("Address", Config.Address);
 
-    Config.beginGroup("ChangbanSlope");
-    Config.setValue("Random_Kingdoms", RandomKingdoms_checkbox->isChecked());
-    Config.endGroup();
-
     Config.beginGroup("3v3");
     Config.setValue("UsingExtension", !standard_3v3_radiobutton->isChecked() && !new_3v3_radiobutton->isChecked());
     Config.setValue("RoleChoose", role_choose_combobox->itemData(role_choose_combobox->currentIndex()).toString());
@@ -1007,13 +978,6 @@ void Server::daemonize(){
 
 Room *Server::createNewRoom(){
     Room *new_room = new Room(this, Config.GameMode);
-    QString error_msg = new_room->createLuaState();
-
-    if(!error_msg.isEmpty()){
-        QMessageBox::information(NULL, tr("Lua scripts error"), error_msg);
-        return NULL;
-    }
-
     current = new_room;
     rooms.insert(current);
 

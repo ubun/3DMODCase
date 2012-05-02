@@ -38,7 +38,7 @@ public:
         if(!skillowner->askForSkillInvoke(objectName(), data))
             return false;
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
-        if(!room->askForCard(skillowner, "Horse|.|.|.|.", "@diyxuelu-horse:"+effect.to->getGeneralName(), data)){
+        if(!room->askForCard(skillowner, "Horse", "@diyxuelu-horse:"+effect.to->getGeneralName(), data)){
             room->loseHp(skillowner, 1);
             room->playSkillEffect("diyxuelu", 1);
             room->moveCardTo(effect.slash, skillowner, Player::Hand, true);
@@ -71,7 +71,7 @@ void DiyShenZhiCard::onEffect(const CardEffectStruct &effect) const{
         room->loseHp(effect.to, 1);
         room->playSkillEffect("diyshenzhi", 1);
     }else{
-        room->throwCard(this);
+        room->throwCard(this, effect.from);
         int card_id = room->askForCardChosen(effect.from, effect.to, "he", "diyshenzhi");
         const Card *card = Sanguosha->getCard(card_id);
         bool is_public = room->getCardPlace(card_id) != Player::Hand;
@@ -160,7 +160,7 @@ void DiyDouDanCard::use(Room *room, ServerPlayer *source, const QList<ServerPlay
     }else{
         source->invoke("clearAG");
         room->playSkillEffect("diydoudan", qrand() %2 + 2);
-        room->doGuanxing(source, cards, true);
+        room->askForGuanxing(source, cards, true);
     }
  }
 
@@ -247,7 +247,7 @@ void DiyKuangXiCard::onEffect(const CardEffectStruct &effect) const{
     room->showCard(effect.to, id);
     const Card *card = Sanguosha->getCard(id);
     if(card->inherits("Slash") || card->inherits("Jink")){
-        room->throwCard(card);
+        room->throwCard(card, effect.to);
         if(effect.to->isKongcheng() && effect.to->hasSkill("kongcheng"))
             return;
         else{
@@ -422,7 +422,7 @@ public:
         log.from = player;
         room->sendLog(log);
 
-        room->playSkillEffect("diycongwen");
+        room->playSkillEffect(objectName());
         room->broadcastInvoke("animate", "lightbox:$diycongwen:5000");
         room->getThread()->delay(2000);
 
@@ -821,7 +821,7 @@ DiyXiXueDialog *DiyXiXueDialog::GetInstance(){
 
 DiyXiXueDialog::DiyXiXueDialog()
 {
-    setWindowTitle(tr("diyxixue"));
+    setWindowTitle(Sanguosha->translate("diyxixue"));
 
     group = new QButtonGroup(this);
 
@@ -853,7 +853,7 @@ void DiyXiXueDialog::selectCard(QAbstractButton *button){
 
 QGroupBox *DiyXiXueDialog::createLeft(){
     QGroupBox *box = new QGroupBox;
-    box->setTitle(tr("Basic cards"));
+    box->setTitle(Sanguosha->translate("basic"));
 
     QVBoxLayout *layout = new QVBoxLayout;
 
@@ -874,13 +874,13 @@ QGroupBox *DiyXiXueDialog::createLeft(){
 }
 
 QGroupBox *DiyXiXueDialog::createRight(){
-    QGroupBox *box = new QGroupBox(tr("Non delayed tricks"));
+    QGroupBox *box = new QGroupBox(Sanguosha->translate("ndtrick"));
     QHBoxLayout *layout = new QHBoxLayout;
 
-    QGroupBox *box1 = new QGroupBox(tr("Single target"));
+    QGroupBox *box1 = new QGroupBox(Sanguosha->translate("single_target"));
     QVBoxLayout *layout1 = new QVBoxLayout;
 
-    QGroupBox *box2 = new QGroupBox(tr("Multiple targets"));
+    QGroupBox *box2 = new QGroupBox(Sanguosha->translate("multiple_targets"));
     QVBoxLayout *layout2 = new QVBoxLayout;
 
 
