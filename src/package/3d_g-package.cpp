@@ -1,4 +1,4 @@
-#include "TBdiy-package.h"
+#include "3d_g-package.h"
 #include "skill.h"
 #include "standard.h"
 #include "maneuvering.h"
@@ -986,8 +986,8 @@ protected:
     }
 };
 
-TBdiyPackage::TBdiyPackage()
-    :Package("TBdiy")
+SanDGPackage::SanDGPackage()
+    :Package("sand_g")
 {
     General *diycaoang = new General(this, "diycaoang", "wei", 4);
     diycaoang->addSkill(new DiyXueLu);
@@ -1037,4 +1037,4 @@ TBdiyPackage::TBdiyPackage()
     addMetaObject<DiyBianZhenCard>();
 }
 
-ADD_PACKAGE(TBdiy)
+ADD_PACKAGE(SanDG)

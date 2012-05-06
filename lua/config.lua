@@ -30,7 +30,7 @@ config = {
         "Special3v3",
         "BGM",
 	"NostalGeneral",
-	"TBdiy",
+	"SanDG",
 --      "Yitian",
 --      "Wisdom",
         "Test";

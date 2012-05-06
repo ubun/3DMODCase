@@ -1,5 +1,5 @@
-#ifndef TBdiyPACKAGE_H
-#define TBdiyPACKAGE_H
+#ifndef SANDGPACKAGE_H
+#define SANDGPACKAGE_H
 
 #include "standard.h"
 #include "package.h"
@@ -17,11 +17,11 @@
 #include <QVBoxLayout>
 #include <QCommandLinkButton>
 
-class TBdiyPackage: public Package{
+class SanDGPackage: public Package{
     Q_OBJECT
 
 public:
-    TBdiyPackage();
+    SanDGPackage();
 };
 
 class DiyXianXiCard: public SkillCard{
@@ -34,8 +34,6 @@ public:
     virtual bool targetsFeasible(const QList<const Player *> &targets, const Player *Self) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
 };
-
-
 
 class DiyShenZhiCard: public SkillCard{
     Q_OBJECT
@@ -130,4 +128,4 @@ private:
     QHash<QString, const Card *> map;
 };
 
-#endif // TBdiyPACKAGE_H
+#endif // SanDGPACKAGE_H

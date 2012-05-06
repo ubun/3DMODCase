@@ -1,7 +1,7 @@
--- translation for TBdiy Package
+-- translation for SanD-G Package
 
 return {
-	["TBdiy"] = "3D初开·基包",
+	["sand_g"] = "3D初开·基",
 	
 	["diycaoang"] = "曹昂",
 	["~diycaoang"] = "来！大不了就是一死！",

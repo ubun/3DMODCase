@@ -63,7 +63,7 @@ SOURCES += src/main.cpp \
 	src/package/yjcm2012-package.cpp \
 	src/package/bgm-package.cpp \
 	src/package/special3v3-package.cpp \
-        src/package/TBdiy-package.cpp \
+        src/package/3d_g-package.cpp \
 	src/scenario/scenario.cpp \
 	src/scenario/boss-mode-scenario.cpp \
 	src/scenario/couple-scenario.cpp \
@@ -190,7 +190,7 @@ HEADERS += src/client/aux-skills.h \
 	src/package/yjcm2012-package.h \
 	src/package/bgm-package.h \
 	src/package/special3v3-package.h \
-        src/package/TBdiy-package.h \
+        src/package/3d_g-package.h \
 	src/scenario/boss-mode-scenario.h \
 	src/scenario/couple-scenario.h \
 	src/scenario/fancheng-scenario.h \
