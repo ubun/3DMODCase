@@ -83,12 +83,44 @@ public:
     }
 };
 
+class Liefu: public TriggerSkill{
+public:
+    Liefu(): TriggerSkill("liefu"){
+        events << SlashMissed;
+    }
+
+    virtual bool trigger(TriggerEvent, ServerPlayer *player, QVariant &data) const{
+        SlashEffectStruct effect = data.value<SlashEffectStruct>();
+
+        Room *room = player->getRoom();
+        if(player->askForSkillInvoke(objectName())){
+            LogMessage log;
+            log.type = "#Liefu";
+            log.from = player;
+            log.to << effect.to;
+            log.arg = objectName();
+            room->sendLog(log);
+
+            room->slashResult(effect, NULL);
+            if(room->askForChoice(player, objectName(), "pan+feng") == "pan")
+                room->askForDiscard(player, objectName(), qMin(player->getCardCount(true), effect.to->getLostHp()), false, true);
+            else
+                effect.to->drawCards(qMin(effect.to->getHp(), 5));
+        }
+
+        return false;
+    }
+};
+
 SanDZhimengPackage::SanDZhimengPackage()
     :Package("sand_zhimeng")
 {
     General *diyliru = new General(this, "diyliru", "qun", 3);
     diyliru->addSkill(new Duji);
     diyliru->addSkill(new ShiPo);
+
+    General *diypanfeng = new General(this, "diypanfeng", "qun");
+    diypanfeng->addSkill(new Liefu);
 
     addMetaObject<DujiCard>();
 }
