@@ -12,6 +12,8 @@
 #include <QMenu>
 #include <QPixmapCache>
 
+using namespace QSanProtocol;
+
 Dashboard::Dashboard(QGraphicsItem *button_widget)
     :left_pixmap("image/system/dashboard-equip.png"), right_pixmap("image/system/dashboard-avatar.png"),
     button_widget(button_widget), selected(NULL), avatar(NULL),
@@ -33,6 +35,7 @@ Dashboard::Dashboard(QGraphicsItem *button_widget)
     sort_type = 0;
 
     animations = new EffectAnimation();
+    _addProgressBar();
 }
 
 void Dashboard::createLeft(){
@@ -429,21 +432,27 @@ QPushButton *Dashboard::addButton(const QString &name, int x, bool from_left){
     return button;
 }
 
-QProgressBar *Dashboard::addProgressBar(){
-    QProgressBar *progress_bar = new QProgressBar;
-    progress_bar->setMinimum(0);
-    progress_bar->setMaximum(100);
-    progress_bar->setFixedSize(300, 15);
-    progress_bar->setTextVisible(false);
-
+void Dashboard::_addProgressBar()
+{    
+    m_progressBar.setFixedSize(300, 15);
+    m_progressBar.setTextVisible(false);
     QGraphicsProxyWidget *widget = new QGraphicsProxyWidget(right);
-    widget->setWidget(progress_bar);
+    widget->setWidget(&m_progressBar);
     widget->setParentItem(middle);
     widget->setPos(300, - 25);
+    connect(&m_progressBar, SIGNAL(timedOut()), this, SIGNAL(progressBarTimedOut()));
+    m_progressBar.hide();    
+}
 
-    progress_bar->hide();
+void Dashboard::hideProgressBar()
+{
+    m_progressBar.hide();
+}
 
-    return progress_bar;
+void Dashboard::showProgressBar(Countdown countdown)
+{
+    m_progressBar.setCountdown(countdown);
+    m_progressBar.show();
 }
 
 void Dashboard::drawHp(QPainter *painter) const{

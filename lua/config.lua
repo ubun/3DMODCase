@@ -31,6 +31,7 @@ config = {
         "BGM",
 	"NostalGeneral",
 	"SanDG",
+	"SanDZhimeng",
 --      "Yitian",
 --      "Wisdom",
         "Test";

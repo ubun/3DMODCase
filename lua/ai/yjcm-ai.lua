@@ -103,10 +103,20 @@ sgs.ai_skill_invoke.enyuan = function(self, data)
 	local damage = data:toDamage()
 	local from = damage.from
 	local source = self.room:getCurrent()
+	local xuanhuotarget 
 	if from then
 		return not self:isFriend(from)
 	else
-		return self:isFriend(source)
+		for _, player in sgs.qlist(self.room:getAlivePlayers()) do
+			if player:hasFlag("xuanhuo_target") then
+				xuanhuotarget = player
+			end
+		end
+		if xuanhuotarget then
+			return self:isFriend(xuanhuotarget)
+		else
+			return self:isFriend(source)
+		end
 	end
 end
 
@@ -144,11 +154,13 @@ sgs.ai_skill_use["@@xuanhuo"] = function(self, prompt)
 	end
 	if #self.enemies < 2 and killloyal < 1 and robequip < 1 then return "." end
 	if self:isEnemy(lord) and killloyal > 0 then
+		self.room:setPlayerFlag(lord, "xuanhuo_target")
 		return "@XuanhuoCard=.->"..lord:objectName()
 	end
 	for _, enemy in ipairs(self.enemies) do
 		if enemy:getCards("e"):length() > 1 and self:getCardsNum("Slash", enemy) == 0 
 		and not self:hasSkills(sgs.lose_equip_skill,enemy) then
+			self.room:setPlayerFlag(enemy, "xuanhuo_target")
 			return "@XuanhuoCard=.->"..enemy:objectName()
 		end
 	end
@@ -157,16 +169,19 @@ sgs.ai_skill_use["@@xuanhuo"] = function(self, prompt)
 		for _, enemy in ipairs(self.enemies) do
 			if friend:canSlash(enemy) and (enemy:getHp() < 2 and not enemy:hasSkill("buqu"))
 			and sgs.getDefense(enemy) < 2 then
+				self.room:setPlayerFlag(friend, "xuanhuo_target")
 				return "@XuanhuoCard=.->"..friend:objectName()
 			end
 		end
 	end
 	for _, friend in ipairs(self.friends_noself) do
 		if self:hasSkills(sgs.lose_equip_skill, friend) and not friend:getEquips():isEmpty() then
+			self.room:setPlayerFlag(friend, "xuanhuo_target")
 			return "@XuanhuoCard=.->"..friend:objectName()
 		end
 	end
 	self:sort(self.friends_noself,"defense")
+		self.room:setPlayerFlag(self.friends_noself[1], "xuanhuo_target")
 		return "@XuanhuoCard=.->"..self.friends_noself[1]:objectName()
 end
 
@@ -245,7 +260,7 @@ sgs.ai_skill_playerchosen.xuanfeng = function(self, targets)
 	targets = sgs.QList2Table(targets)
 	self:sort(targets,"defense")
 	for _, enemy in ipairs(self.enemies) do
-		if not self:needKongcheng(enemy) and 
+		if not self:needKongcheng(enemy) and not enemy:isNude() and
 		not (enemy:hasSkill("guzheng") and self.room:getCurrent():getPhase() == sgs.Player_Discard) then
 			return enemy
 		end
@@ -493,7 +508,7 @@ xianzhen_skill.getTurnUseCard=function(self)
 
 	for _, enemy in ipairs(self.enemies) do
 		local enemy_max_card = self:getMaxCard(enemy)
-		if enemy_max_card and max_point and max_point > enemy_max_card:getNumber() and slashNum > 1 then
+		if enemy_max_card and max_point and max_point > enemy_max_card:getNumber() and slashNum > 0 then
 
 			local slash=self:getCard("Slash")
 			local dummy_use={}

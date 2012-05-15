@@ -699,7 +699,7 @@ function SmartAI:getPriorTarget()
 		return prior_targets[1]
 	end
 	
-	self:sort(self.enemies)
+	self:sort(self.enemies,"threat")
 	for _, enemy in ipairs(self.enemies) do
 		if not self:hasSkills(sgs.exclusive_skill, enemy) and not inOneGroup(enemy) then return enemy end
 	end
@@ -1132,8 +1132,7 @@ end
 function sgs.gameProcess(room)
 	local rebel_num = sgs.current_mode_players["rebel"]
 	local loyal_num = sgs.current_mode_players["loyalist"]
-	if sgs.turncount < 2 then return "neutral"
-	elseif rebel_num == 0 and loyal_num> 0 then return "loyalist"
+	if rebel_num == 0 and loyal_num> 0 then return "loyalist"
 	elseif loyal_num == 0 and rebel_num > 1 then return "rebel" end
 	local loyal_value, rebel_value = 0, 0, 0
 	local health = sgs.isLordHealthy()
@@ -1262,8 +1261,8 @@ function SmartAI:objectiveLevel(player)
 				else
 					return 5
 				end
-			end
-		elseif process == "neutral" then return 0
+			end	
+		elseif process == "neutral" or sgs.turncount < 2 then return 0
 		elseif process:match("rebel") then
 			if sgs.evaluatePlayerRole(player) == "rebel" then 
 				if process == "rebel" then return 5 else return 3 end
@@ -1683,7 +1682,7 @@ function SmartAI:askForSuit(reason)
 	if not reason then return sgs.ai_skill_suit.fanjian() end -- this line is kept for back-compatibility
 	local callback = sgs.ai_skill_suit[reason]
 	if type(callback) == "function" then
-		if callback() then return callback(self) end
+		if callback(self) then return callback(self) end
 	end
 	return math.random(0,3)
 end
@@ -2130,7 +2129,7 @@ function SmartAI:askForAG(card_ids, refusable, reason)
 		if card:inherits("Peach") then return card:getEffectiveId() end
 	end
 	for _, card in ipairs(cards) do
-		if card:inherits("Indulgence") and not (self:isWeak() and self:getCardsNum("Jink", self.player) == 0) then return card:getEffectiveId() end
+		if card:inherits("Indulgence") and not (self:isWeak() and self:getCardsNum("Jink") == 0) then return card:getEffectiveId() end
 		if card:inherits("AOE") and not (self:isWeak() and self:getCardsNum("Jink", self.player) == 0) then return card:getEffectiveId() end
 	end
 	self:sortByCardNeed(cards)
@@ -2618,9 +2617,12 @@ function SmartAI:askForSinglePeach(dying)
 			if not same then return "." end
 		end
 		if (self.player:objectName() == dying:objectName()) then
-			card_str = self:getCardId("Analeptic") or self:getCardId("Peach")
+			card_str = self:getCardId("Analeptic")
+			if not card_str then 
+			 card_str = self:getCardId("Peach") end
 		elseif dying:isLord() then
 			card_str = self:getCardId("Peach")
+		elseif self:doNotSave(dying) then return "." 
 		else
 			for _, friend in ipairs(self.friends_noself) do
 				if friend:getHp() == 1 and friend:isLord() and not friend:hasSkill("buqu") then  weaklord = weaklord + 1 end
@@ -3029,7 +3031,73 @@ function SmartAI:getCards(class_name, player, flag)
 end
 
 function getCardsNum(class_name, player)
-	return #getCards(class_name, player)
+	if not player then
+		return #getCards(class_name, player)
+	else
+		local cards = sgs.QList2Table(player:getHandcards())
+		local num = 0
+		local shownum = 0
+		for _, card in ipairs(cards) do
+			if card:hasFlag("visible") then
+				shownum = shownum + 1
+				if card:inherits(class_name) then
+					num = num + 1
+				end
+			end
+		end
+	end
+	local redequip = 0
+	local ecards = player:getCards("e")
+	for _, card in sgs.qlist(ecards) do
+		if card:isRed() then redequip = redequip + 1 end
+	end
+	if class_name == "Slash" then
+		if player:hasSkill("wusheng") then
+			return player:getHandcardNum()+ redequip
+		elseif player:hasSkill("gongqi") then
+			return num+(player:getHandcardNum()-shownum)/2+player:getEquips():length()
+		elseif player:hasSkill("longdan") then
+			return player:getHandcardNum()-1
+		else
+			return num+(player:getHandcardNum()-shownum)/2
+		end
+	elseif class_name == "Jink" then
+		if player:hasSkill("qingguo") then 
+			return player:getHandcardNum()
+		elseif player:hasSkill("longdan") then
+			return player:getHandcardNum()-1
+		elseif player:hasSkill("longhun") then
+			return num+(player:getHandcardNum()-shownum)/3
+		else 
+			return num+(player:getHandcardNum()-shownum)/3
+		end
+	elseif class_name == "Peach" then
+		if player:hasSkill("jijiu") then
+			return player:getHandcardNum()-1+redequip
+		elseif player:hasSkill("longhun") then
+			return num+(player:getHandcardNum()-shownum)/3
+		else 
+			return num
+		end 
+	elseif class_name == "Analeptic" then
+		if player:hasSkill("jiuchi") then
+			return num+(player:getHandcardNum()-shownum)/3
+		elseif player:hasSkill("jiushi") then
+			return num+1
+		else
+			return num
+		end
+	elseif class_name == "Nullification" then
+		if player:hasSkill("kanpo") then
+			return num+(player:getHandcardNum()-shownum)/2
+		elseif player:hasSkill("yanzheng") then
+			return num+player:getEquips():length()
+		else
+			return num
+		end
+	else
+		return num
+	end
 end
 
 function SmartAI:getCardsNum(class_name, player, flag, selfonly)
@@ -3413,8 +3481,10 @@ function SmartAI:getAoeValueTo(card, to , from)
 			end
 		end
 
-		if to:getHp() > 0 then
+		if to:getHp() > 1 then
 			value = value - 20
+		else
+			value = value -30
 		end
 
 		if self:isFriend(from, to) then

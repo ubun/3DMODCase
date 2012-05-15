@@ -3,6 +3,7 @@
 #include "engine.h"
 #include "client.h"
 #include "settings.h"
+#include "protocol.h"
 
 #include <QSignalMapper>
 #include <QLineEdit>
@@ -13,6 +14,8 @@
 #include <QRadioButton>
 #include <QCheckBox>
 #include <QTabWidget>
+
+using namespace QSanProtocol;
 
 OptionButton::OptionButton(QString icon_path, const QString &caption, QWidget *parent)
     :QToolButton(parent)
@@ -40,10 +43,11 @@ void OptionButton::mouseDoubleClickEvent(QMouseEvent *){
     emit double_clicked();
 }
 
-
 ChooseGeneralDialog::ChooseGeneralDialog(const QStringList &general_names, QWidget *parent)
-    :QDialog(parent), free_chooser(NULL)
+    :QDialog(parent)
 {
+    m_freeChooseDialog = NULL;
+
     setWindowTitle(tr("Choose general"));
 
     QString lord_name;
@@ -100,10 +104,8 @@ ChooseGeneralDialog::ChooseGeneralDialog(const QStringList &general_names, QWidg
             if(party<2)
                 buttons.at(index)->setEnabled(false);
             if(Self->getGeneral())
-                    if(Self->getGeneral()->getKingdom()
-                        != general->getKingdom()||
-                        Self->getGeneralName() ==
-                            general->objectName())
+                    if(Self->getGeneral()->getKingdom() != general->getKingdom()||
+                        Self->getGeneralName() == general->objectName())
                 buttons.at(index)->setEnabled(false);
             index ++;
         }
@@ -180,10 +182,9 @@ ChooseGeneralDialog::ChooseGeneralDialog(const QStringList &general_names, QWidg
     if(ServerInfo.OperationTimeout == 0){
         progress_bar = NULL;
     }else{
-        progress_bar = new QProgressBar;
-        progress_bar->setMinimum(0);
-        progress_bar->setMaximum(100);
-        progress_bar->setTextVisible(false);
+        progress_bar = new QSanCommandProgressBar();
+        progress_bar->setTimerEnabled(true);
+        progress_bar->setCountdown(S_COMMAND_CHOOSE_GENERAL);
         last_layout->addWidget(progress_bar);
     }
 
@@ -203,44 +204,29 @@ ChooseGeneralDialog::ChooseGeneralDialog(const QStringList &general_names, QWidg
 
     setLayout(dialog_layout);
 
-    if(ServerInfo.OperationTimeout != 0)
-        startTimer(200);
+}
+
+void ChooseGeneralDialog::done(int result)
+{
+    if (m_freeChooseDialog != NULL)
+    {
+        m_freeChooseDialog->reject();
+        delete m_freeChooseDialog;
+        m_freeChooseDialog = NULL;
+    }
+    QDialog::done(result);
 }
 
 void ChooseGeneralDialog::freeChoose(){
-    FreeChooseDialog *dialog = new FreeChooseDialog(this);
+    QDialog* dialog = new FreeChooseDialog(this);
 
     connect(dialog, SIGNAL(accepted()), this, SLOT(accept()));
     connect(dialog, SIGNAL(general_chosen(QString)), ClientInstance, SLOT(onPlayerChooseGeneral(QString)));
 
-    free_chooser = dialog;
+    m_freeChooseDialog = dialog;
 
     dialog->exec();
 }
-
-void ChooseGeneralDialog::timerEvent(QTimerEvent *event){
-    if(progress_bar == NULL)
-        return;
-
-    static const int timeout = Config.S_CHOOSE_GENERAL_TIMEOUT;
-
-    int step = 100 / double(timeout * 5);
-    int new_value = progress_bar->value() + step;
-    new_value = qMin(progress_bar->maximum(), new_value);
-    progress_bar->setValue(new_value);
-
-    if(new_value >= progress_bar->maximum()){
-        killTimer(event->timerId());
-        if(isVisible()){
-            reject();
-            if(free_chooser)
-                free_chooser->reject();
-        }
-    }else
-        progress_bar->setValue(new_value);
-}
-
-// -------------------------------------
 
 FreeChooseDialog::FreeChooseDialog(QWidget *parent, bool pair_choose)
     :QDialog(parent), pair_choose(pair_choose)
