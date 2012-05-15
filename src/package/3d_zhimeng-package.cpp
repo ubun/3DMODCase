@@ -112,6 +112,64 @@ public:
     }
 };
 
+PengriCard::PengriCard(){
+}
+
+bool PengriCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const{
+    return targets.isEmpty() && to_select != Self && !to_select->isNude() && to_select->canSlash(Self, false);
+}
+
+void PengriCard::use(Room *room, ServerPlayer *player, const QList<ServerPlayer *> &tar) const{
+    int card_id = room->askForCardChosen(player, tar.first(), "he", "pengri");
+    room->obtainCard(player, card_id, room->getCardPlace(card_id) != Player::Hand);
+
+    Slash *slash = new Slash(Card::NoSuit, 0);
+    slash->setSkillName("pengri");
+    CardUseStruct use;
+    use.card = slash;
+    use.from = tar.first();
+    use.to << player;
+    room->useCard(use);
+}
+
+class Pengri:public ZeroCardViewAsSkill{
+public:
+    Pengri():ZeroCardViewAsSkill("pengri"){
+
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return ! player->hasUsed("PengriCard");
+    }
+
+    virtual const Card *viewAs() const{
+        return new PengriCard;
+    }
+};
+
+class Gangli:public MasochismSkill{
+public:
+    Gangli():MasochismSkill("gangli"){
+    }
+
+    virtual void onDamaged(ServerPlayer *player, const DamageStruct &damage) const{
+        Room *room = player->getRoom();
+        if(damage.damage != 1 || !damage.from || damage.from == player)
+            return;
+
+        if(room->askForSkillInvoke(player, objectName(), QVariant::fromValue(damage))){
+            ServerPlayer *target = room->askForPlayerChosen(player, room->getOtherPlayers(damage.from), objectName());
+            Slash *slash = new Slash(Card::NoSuit, 0);
+            slash->setSkillName(objectName());
+            CardUseStruct use;
+            use.card = slash;
+            use.from = damage.from;
+            use.to << target;
+            room->useCard(use, false);
+        }
+    }
+};
+
 SanDZhimengPackage::SanDZhimengPackage()
     :Package("sand_zhimeng")
 {
@@ -122,7 +180,12 @@ SanDZhimengPackage::SanDZhimengPackage()
     General *diypanfeng = new General(this, "diypanfeng", "qun");
     diypanfeng->addSkill(new Liefu);
 
+    General *diychengyu = new General(this, "diychengyu", "wei", 3);
+    diychengyu->addSkill(new Pengri);
+    diychengyu->addSkill(new Gangli);
+
     addMetaObject<DujiCard>();
+    addMetaObject<PengriCard>();
 }
 
 ADD_PACKAGE(SanDZhimeng)

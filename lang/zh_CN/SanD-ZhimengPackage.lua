@@ -21,12 +21,13 @@ return {
 	["liefu:pan"] = "自己弃牌",
 	["liefu:feng"] = "对方摸牌",
 	
-	["diyganqian"] = "甘倩",
-	["~diyganqian"] = "看来，玄德克妻为真啊！",
-	["cv:diyganqian"] = " ",
-	["designer:diyganqian"] = "弱弱的diyer",
-	["#diyganqian"] = "皇思夫人",
-	["illustrator:diyganqian"] = " ",
+	["#diychengyu"] = "世之奇士", -- wei,3HP
+	["diychengyu"] = "程昱",
+	["pengri"] = "捧日",
+	[":pengri"] = "出牌阶段，你可以获得一名其他角色的一张牌，视为该角色对你使用一张【杀】。每阶段限一次。",
+	["gangli"] = "刚戾",
+	[":gangli"] = "每当你受到其他角色造成的1点伤害后，你可以：选择除伤害来源外的另一名角色，视为伤害来源对该角色使用一张【杀】（此【杀】无距离限制且不计入出牌阶段使用次数限制）。",
+
 	
 	["diyshenzhi"] = "神智",
 	["$diyshenzhi1"] = "交给你，我放心。",
