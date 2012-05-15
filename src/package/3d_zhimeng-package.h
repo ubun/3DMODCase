@@ -11,4 +11,13 @@ public:
     SanDZhimengPackage();
 };
 
+class DujiCard: public SkillCard{
+    Q_OBJECT
+
+public:
+    Q_INVOKABLE DujiCard();
+
+    virtual void use(Room *room, ServerPlayer *source, const QList<ServerPlayer *> &targets) const;
+};
+
 #endif // SanDZHIMENGPACKAGE_H

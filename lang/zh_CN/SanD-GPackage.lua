@@ -1,7 +1,7 @@
 -- translation for SanD-G Package
 
 return {
-	["sand_g"] = "3D初开·基",
+	["sand_g"] = "3D·基",
 	
 	["diycaoang"] = "曹昂",
 	["~diycaoang"] = "来！大不了就是一死！",

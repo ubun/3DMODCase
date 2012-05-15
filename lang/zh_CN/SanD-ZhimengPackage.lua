@@ -1,15 +1,18 @@
 -- translation for SanD-Zhimeng Package
 
 return {
-	["sand_zhimeng"] = "3D零·织梦",
-	
-	["diycaoang"] = "曹昂",
-	["~diycaoang"] = "来！大不了就是一死！",
-	["cv:diycaoang"] = " ",
-	["designer:diycaoang"] = "CoffeeNO加糖",
-	["#diycaoang"] = "丰悼王",
-	["illustrator:diycaoang"] = " ",
-	
+	["sand_zhimeng"] = "3D·织梦",
+
+	["#diyliru"] = "魔王的智囊", -- qun,3HP
+	["diyliru"] = "李儒",
+	["duji"] = "毒计",
+	[":duji"] = "出牌阶段，若你的武将牌上没有牌，你可以将一张黑桃牌置于你的武将牌上。当一名其他角色在其出牌阶段使用一张【杀】指定目标后，你可将此牌置于其手上，并令此【杀】当有【酒】效果的【杀】结算，然后该角色须执行下列一项：将武将牌翻面或失去1点体力。",
+	["duji:turn"] = "将自己翻面",
+	["duji:lp"] = "失去1点体力",
+	["du"] = "毒计",
+	["shiPo"] = "识破",
+	[":shiPo"] = "锁定技，你不能成为黑桃【杀】或黑桃锦囊的目标。",
+
 	["diyxuelu"] = "血路",
 	["$diyxuelu1"] = "主公快快上马！",
 	["$diyxuelu2"] = "我来断后，你们快走！",
