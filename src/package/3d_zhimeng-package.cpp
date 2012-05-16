@@ -389,6 +389,111 @@ public:
     }
 };
 
+class Jingrui:public OneCardViewAsSkill{
+public:
+    Jingrui():OneCardViewAsSkill("jingrui"){
+    }
+
+    virtual bool viewFilter(const CardItem *to_select) const{
+        return !to_select->isEquipped();
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return player->getHandcardNum() >= player->getHp() && Slash::IsAvailable(player);
+    }
+
+    virtual bool isEnabledAtResponse(const Player *player, const QString &pattern) const{
+        return player->getHandcardNum() >= player->getHp() &&
+                (pattern == "jink" || pattern == "slash");
+    }
+
+    virtual const Card *viewAs(CardItem *card_item) const{
+        const Card *card = card_item->getFilteredCard();
+        bool clone_jink = false;
+        if(ClientInstance->getStatus() == Client::Responsing)
+            clone_jink = ClientInstance->getPattern() == "jink";
+        if(clone_jink){
+            Jink *jink = new Jink(card->getSuit(), card->getNumber());
+            jink->addSubcard(card);
+            jink->setSkillName(objectName());
+            return jink;
+        }
+        else{
+            Slash *slash = new Slash(card->getSuit(), card->getNumber());
+            slash->addSubcard(card);
+            slash->setSkillName(objectName());
+            return slash;
+        }
+    }
+};
+
+ZhaoxinCard::ZhaoxinCard(){
+    target_fixed = true;
+}
+
+void ZhaoxinCard::use(Room *room, ServerPlayer *source, const QList<ServerPlayer *> &tar) const{
+    room->showAllCards(source);
+    bool same = false;
+    foreach(const Card *card1, source->getHandcards()){
+        foreach(const Card *card2, source->getHandcards()){
+            if(card1 == card2)
+                continue;
+            if(card1->getSuit() == card2->getSuit())
+                same = true;
+            else
+                same = false;
+        }
+    }
+    if(!same){
+        ServerPlayer *i = room->askForPlayerChosen(source, room->getAlivePlayers(), "zhaoxin");
+        room->loseHp(i);
+    }
+    else{
+        QList<ServerPlayer *> targets;
+        foreach(ServerPlayer *i, room->getOtherPlayers(source))
+            if(!i->isNude())
+                targets << i;
+        if(!targets.isEmpty()){
+            ServerPlayer *t = room->askForPlayerChosen(source, targets, "zhaoxin");
+            int card_id = room->askForCardChosen(source, t, "he", "zhaoxin");
+            room->obtainCard(source, card_id, room->getCardPlace(card_id) != Player::Hand);
+        }
+    }
+}
+
+class Zhaoxin:public ZeroCardViewAsSkill{
+public:
+    Zhaoxin():ZeroCardViewAsSkill("zhaoxin"){
+
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return !player->hasUsed("ZhaoxinCard") && player->getHandcardNum() >= player->getHp();
+    }
+
+    virtual const Card *viewAs() const{
+        return new ZhaoxinCard;
+    }
+};
+
+class Huaiyi: public TriggerSkill{
+public:
+    Huaiyi():TriggerSkill("huaiyi"){
+        events << HpChanged;
+        frequency = Frequent;
+    }
+
+    virtual int getPriority() const{
+        return -1;
+    }
+
+    virtual bool trigger(TriggerEvent , ServerPlayer *player, QVariant &data) const{
+        if(player->askForSkillInvoke(objectName()))
+            player->drawCards(1);
+        return false;
+    }
+};
+
 SanDZhimengPackage::SanDZhimengPackage()
     :Package("sand_zhimeng")
 {
@@ -414,10 +519,18 @@ SanDZhimengPackage::SanDZhimengPackage()
     related_skills.insertMulti("xiandeng", "#xdclear");
     diyyuejin->addSkill(new Xiaoguo);
 
+    General *diychendao = new General(this, "diychendao", "shu");
+    diychendao->addSkill(new Jingrui);
+
+    General *diysimazhao = new General(this, "diysimazhao", "wei", 3);
+    diysimazhao->addSkill(new Zhaoxin);
+    diysimazhao->addSkill(new Huaiyi);
+
     addMetaObject<DujiCard>();
     addMetaObject<PengriCard>();
     addMetaObject<XunguiCard>();
     addMetaObject<DaojuCard>();
+    addMetaObject<ZhaoxinCard>();
 }
 
 ADD_PACKAGE(SanDZhimeng)
