@@ -564,7 +564,7 @@ void ChanxianCard::onEffect(const CardEffectStruct &effect) const{
 
 class Chanxian: public OneCardViewAsSkill{
 public:
-    Chanxian():OneCardViewAsSkill("Chanxian"){
+    Chanxian():OneCardViewAsSkill("chanxian"){
         default_choice = "slash";
     }
 
@@ -581,6 +581,166 @@ public:
         card->addSubcard(card_item->getFilteredCard());
 
         return card;
+    }
+};
+
+class Yanhe:public PhaseChangeSkill{
+public:
+    Yanhe():PhaseChangeSkill("yanhe"){
+    }
+
+    virtual bool onPhaseChange(ServerPlayer *zhugejin) const{
+        if(zhugejin->getPhase() == Player::Start &&
+           zhugejin->isWounded() &&
+           zhugejin->askForSkillInvoke(objectName())){
+            Room *room = zhugejin->getRoom();
+            room->playSkillEffect(objectName());
+            QList<ServerPlayer *> targets;
+            foreach(ServerPlayer *player, room->getOtherPlayers(zhugejin)){
+                if(player->hasEquip())
+                    targets << player;
+            }
+            if(!targets.isEmpty()){
+                ServerPlayer *target = room->askForPlayerChosen(zhugejin, targets, "yanhe");
+                for(int i = 0; i < zhugejin->getLostHp(); i ++){
+                    int card_id = room->askForCardChosen(zhugejin, target, "e", "yanhe");
+                    room->obtainCard(target, card_id);
+                    if(!target->hasEquip())
+                        break;
+                }
+            }
+        }
+        return false;
+    }
+};
+
+class Youqi: public PhaseChangeSkill{
+public:
+    Youqi():PhaseChangeSkill("youqi"){
+        frequency = Wake;
+    }
+
+    virtual bool triggerable(const ServerPlayer *target) const{
+        return PhaseChangeSkill::triggerable(target)
+                && target->getMark("youqi") == 0
+                && target->getPhase() == Player::Judge
+                && target->getHp() == 1;
+    }
+
+    virtual bool onPhaseChange(ServerPlayer *sunce) const{
+        Room *room = sunce->getRoom();
+
+        LogMessage log;
+        log.type = "#YouqiWake";
+        log.from = sunce;
+        log.arg = objectName();
+        room->sendLog(log);
+
+        room->playSkillEffect(objectName());
+        //room->broadcastInvoke("animate", "lightbox:$youqi:5000");
+        //room->getThread()->delay(5000);
+
+        room->loseMaxHp(sunce);
+
+        room->acquireSkill(sunce, "dimeng");
+        room->acquireSkill(sunce, "kongcheng");
+
+        room->setPlayerMark(sunce, "youqi", 1);
+
+        return false;
+    }
+};
+
+QuanjianCard::QuanjianCard(){
+    once = true;
+    will_throw = false;
+}
+
+bool QuanjianCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const{
+    return targets.isEmpty() && to_select != Self;
+}
+
+void QuanjianCard::onEffect(const CardEffectStruct &effect) const{
+    effect.to->obtainCard(this);
+
+    Room *room = effect.to->getRoom();
+    const Card *card = effect.to->getRandomHandCard();
+    room->showCard(effect.to, card->getEffectiveId());
+    if(card->inherits("Jink")){
+        effect.from->drawCards(1);
+        effect.to->drawCards(1);
+    }
+}
+
+class Quanjian: public OneCardViewAsSkill{
+public:
+    Quanjian():OneCardViewAsSkill("quanjian"){
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return ! player->hasUsed("QuanjianCard");
+    }
+
+    virtual bool viewFilter(const CardItem *to_select) const{
+        return to_select->getCard()->inherits("Jink");
+    }
+
+    virtual const Card *viewAs(CardItem *card_item) const{
+        QuanjianCard *card = new QuanjianCard;
+        card->addSubcard(card_item->getFilteredCard());
+
+        return card;
+    }
+};
+
+SijieCard::SijieCard(){
+
+}
+
+bool SijieCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const{
+    if(!targets.isEmpty())
+        return false;
+
+    return !to_select->isNude();
+}
+
+void SijieCard::onEffect(const CardEffectStruct &effect) const{
+    int discard = qMax(1, effect.to->getLostHp());
+    int all = effect.to->getCardCount(true);
+    effect.from->getRoom()->askForDiscard(effect.to, "sijie", qMin(discard, all), false, true);
+}
+
+class SijieViewAsSkill: public ZeroCardViewAsSkill{
+public:
+    SijieViewAsSkill():ZeroCardViewAsSkill("sijie"){
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return false;
+    }
+
+    virtual bool isEnabledAtResponse(const Player *player, const QString &pattern) const{
+        return pattern == "@@sijie";
+    }
+
+    virtual const Card *viewAs() const{
+        return new SijieCard;
+    }
+};
+
+class Sijie: public MasochismSkill{
+public:
+    Sijie():MasochismSkill("sijie"){
+        view_as_skill = new SijieViewAsSkill;
+    }
+
+    virtual void onDamaged(ServerPlayer *jushou, const DamageStruct &damage) const{
+        Room *room = jushou->getRoom();
+        int x = damage.damage, i;
+        for(i=0; i<x; i++){
+            if(!room->askForUseCard(jushou, "@@sijie", "@sijie"))
+                break;
+        }
     }
 };
 
@@ -620,12 +780,22 @@ SanDZhimengPackage::SanDZhimengPackage()
     diysunluban->addSkill(new Yinsi);
     diysunluban->addSkill(new Chanxian);
 
+    General *diyzhugejin = new General(this, "diyzhugejin", "wu");
+    diyzhugejin->addSkill(new Yanhe);
+    diyzhugejin->addSkill(new Youqi);
+
+    General *diyjushou = new General(this, "diyjushou", "qun", 3);
+    diyjushou->addSkill(new Quanjian);
+    diyjushou->addSkill(new Sijie);
+
     addMetaObject<DujiCard>();
     addMetaObject<PengriCard>();
     addMetaObject<XunguiCard>();
     addMetaObject<DaojuCard>();
     addMetaObject<ZhaoxinCard>();
     addMetaObject<ChanxianCard>();
+    addMetaObject<QuanjianCard>();
+    addMetaObject<SijieCard>();
 }
 
 ADD_PACKAGE(SanDZhimeng)
