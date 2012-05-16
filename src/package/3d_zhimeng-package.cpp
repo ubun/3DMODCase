@@ -267,10 +267,19 @@ bool DaojuCard::targetsFeasible(const QList<const Player *> &targets, const Play
 void DaojuCard::onUse(Room *room, const CardUseStruct &card_use) const{
     //room->throwCard(this);
     CardStar ju = Sanguosha->getCard(card_use.from->getPile("gui").first());
-    Card *new_card = Sanguosha->cloneCard(ju->objectName(), Card::NoSuit, 0);
+
+    const Card *first = Sanguosha->getCard(getSubcards().first());
+    const Card *second = Sanguosha->getCard(getSubcards().last());
+    Card::Suit suit = Card::NoSuit;
+    if(first->isBlack() && second->isBlack())
+        suit = Card::Spade;
+    else if(first->isRed() && second->isRed())
+        suit = Card::Heart;
+    Card *new_card = Sanguosha->cloneCard(ju->objectName(), suit, (first->getNumber() + second->getNumber()) / 2);
     new_card->setSkillName("daoju");
-    foreach(int x, getSubcards())
-        new_card->addSubcard(Sanguosha->getCard(x));
+    new_card->addSubcard(first);
+    new_card->addSubcard(second);
+
     CardUseStruct use;
     use.card = new_card;
     use.from = card_use.from;
@@ -307,6 +316,79 @@ public:
     }
 };
 
+class Xiandeng: public DrawCardsSkill{
+public:
+    Xiandeng():DrawCardsSkill("xiandeng"){
+
+    }
+
+    virtual int getDrawNum(ServerPlayer *play2, int n) const{
+        Room *room = play2->getRoom();
+        if(room->askForSkillInvoke(play2, objectName())){
+            room->playSkillEffect(objectName());
+            ServerPlayer *target = room->askForPlayerChosen(play2, room->getOtherPlayers(play2), objectName());
+            room->setFixedDistance(play2, target, 0);
+            play2->setFlags(objectName());
+            play2->tag["XD"] = QVariant::fromValue((PlayerStar)target);
+            return n - 1;
+        }else
+            return n;
+    }
+};
+
+class XDClear: public PhaseChangeSkill{
+public:
+    XDClear():PhaseChangeSkill("#xdclear"){
+    }
+
+    virtual bool onPhaseChange(ServerPlayer *yuejin) const{
+        if(yuejin->getPhase() == Player::NotActive){
+            PlayerStar target = yuejin->tag["XD"].value<PlayerStar>();
+            if(target){
+                yuejin->getRoom()->setFixedDistance(yuejin, target, -1);
+                yuejin->tag.remove("XD");
+            }
+        }
+        return false;
+    }
+};
+
+class Xiaoguo: public TriggerSkill{
+public:
+    Xiaoguo():TriggerSkill("xiaoguo"){
+        events << SlashMissed;
+    }
+
+    virtual int getPriority() const{
+        return 2;
+    }
+
+    virtual bool trigger(TriggerEvent, ServerPlayer *player, QVariant &data) const{
+        SlashEffectStruct effect = data.value<SlashEffectStruct>();
+        if(effect.slash->getSuit() != Card::Heart && !effect.jink->isVirtualCard()){
+            Room *room = player->getRoom();
+            if(player->askForSkillInvoke(objectName(), data)){
+                room->playSkillEffect(objectName());
+                effect.to->obtainCard(effect.jink);
+
+                QString name = effect.slash->isBlack() ? "supply_shortage" : "indulgence";
+                Card *new_card = Sanguosha->cloneCard(name, effect.slash->getSuit(), effect.slash->getNumber());
+                new_card->setSkillName("xiaoguo");
+                new_card->addSubcard(effect.slash);
+
+                if(!effect.from->isProhibited(effect.to, new_card)){
+                    CardUseStruct use;
+                    use.card = new_card;
+                    use.from = effect.from;
+                    use.to << effect.to;
+                    room->useCard(use);
+                }
+            }
+        }
+        return false;
+    }
+};
+
 SanDZhimengPackage::SanDZhimengPackage()
     :Package("sand_zhimeng")
 {
@@ -325,6 +407,12 @@ SanDZhimengPackage::SanDZhimengPackage()
     diyjiangwan->addSkill(new Yaliang);
     diyjiangwan->addSkill(new Xungui);
     diyjiangwan->addSkill(new Daoju);
+
+    General *diyyuejin = new General(this, "diyyuejin", "wei");
+    diyyuejin->addSkill(new Xiandeng);
+    diyyuejin->addSkill(new XDClear);
+    related_skills.insertMulti("xiandeng", "#xdclear");
+    diyyuejin->addSkill(new Xiaoguo);
 
     addMetaObject<DujiCard>();
     addMetaObject<PengriCard>();

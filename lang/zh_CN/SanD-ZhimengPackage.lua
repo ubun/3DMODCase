@@ -47,25 +47,14 @@ return {
 	[":daoju"] = "出牌阶段，你可以将两张相同颜色手牌当“规”所示锦囊使用。每阶段限用一次。",
 	["gui"] = "规",
 	
-	["diyjiangwei"] = "姜维",
-	["~diyjiangwei"] = "什么？钟会已潜入都城？",
-	["cv:diyjiangwei"] = " ",
-	["designer:diyjiangwei"] = "RP集散中心",
-	["#diyjiangwei"] = "龙的继承者",
-	["illustrator:diyjiangwei"] = " ",
-	
-	["diydoudan"] = "斗胆",
-	["$diydoudan1"] = "丞相，速速遣兵支援啊！",
-	["$diydoudan2"] = "维愿以身试阵！",
-	["$diydoudan3"] = "此计必可克敌与营中！",
-	[":diydoudan"] = "摸牌阶段摸牌前，你可放弃摸牌，然后展示牌堆顶的三张牌，选择下列两项中的一项：\
-1.拿走一张并弃掉其余的；\
-2.将这三张牌以任意顺序置于牌堆顶。\
-执行后，视为对攻击范围内的一名其他角色使用了一张【杀】，然后跳过你的出牌阶段。",
-	["@diydoudan"] = "你想发动技能【斗胆】吗？",
-	["obtain1cd"] = "获得其中一张牌",
-	["guan3xing"] = "任意摆放此三张牌",
-	["#DouDanLog"] = "%from 对 %to 使用了一张 <font color='yellow'><b>杀[无色]</b></font>", 
+	["#diyyuejin"] = "胆识英烈", -- wei,4HP
+	["diyyuejin"] = "乐进",
+	["designer:diyyuejin"] = "R_Shanks",
+	["illustrator:diyyuejin"] = "火神网",
+	["xiandeng"] = "先登",
+	[":xiandeng"] = "摸牌阶段，你可少摸一张牌，然后你无视一名其他角色的距离直到回合结束。",
+	["xiaoguo"] = "骁果",
+	[":xiaoguo"] = "出牌阶段，每当你使用非红桃【杀】被目标角色的【闪】抵消时，你可令该【闪】返回该角色手牌中，然后将此【杀】当一张延时类锦囊对该角色使用（黑色当【兵粮寸断】，方块当【乐不思蜀】）。",
 	
 	["diyweiyan"] = "魏延",
 	["~diyweiyan"] = "啊！杨仪！害我！",
