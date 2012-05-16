@@ -72,34 +72,15 @@ return {
 	["huaiyi"] = "怀异",
 	[":huaiyi"] = "每当你体力值发生一次变化后，你可以摸一张牌。",
 
-	["diylingcao"] = "凌操",
-	["~diylingcao"] = "只身前往……只有……死路一条……",
-	["cv:diylingcao"] = " ",
-	["designer:diylingcao"] = "灭鼠灵大人",
-	["#diylingcao"] = "东吴的先锋",
-	["illustrator:diylingcao"] = " ",
-	
-	["diyjifeng"] = "疾风",
-	["$diyjifeng"] = "乘风而行！",
-	[":diyjifeng"] = "出牌阶段，你可将一张手牌至于你的武将牌上称之为“舟”，并获得一名其他角色装备区内的一张牌，则你无视到该角色的距离直到回合结束为止。每阶段限一次。",
-	["JiFengPile"] = "舟",
-	["diyjingcao"] = "劲草",
-	["$diyjingcao1"] = "我岂能败在你的手上！",
-	["$diyjingcao2"] = "还有一手呢！",
-	[":diyjingcao"] = "摸牌阶段摸牌前，你可放弃摸牌，改为获得所有的“舟”",
-	
-	["diyhuaxiong"] = "华雄",
-	["~diyhuaxiong"] = "来将何名？……啊！",
-	["cv:diyhuaxiong"] = " ",
-	["designer:diyhuaxiong"] = "冬天•吃雪糕",
-	["#diyhuaxiong"] = "恶鬼",
-	["illustrator:diyhuaxiong"] = " ",
-	
-	["diyxuezhan"] = "血战",
-	["$diyxuezhan1"] = "阵前见真汉！",
-	["$diyxuezhan2"] = "打了才知道！",
-	[":diyxuezhan"] = "摸牌阶段摸牌前，你可放弃摸牌，视为对一名其他角色使用了一张【决斗】（此【决斗】不能被【无懈可击】响应）；若此【决斗】造成伤害（你为伤害来源时），你摸两张牌并获得技能“咆哮”直到回合结束，否则你不能使用【杀】直到回合结束。",
-	
+	["#diysunluban"] = "矫矜的毒刺", -- wu,3HP
+	["diysunluban"] = "孙鲁班",
+	["designer:diysunluban"] = "小掉线仙",
+	["illustrator:diysunluban"] = "阎魔爱",
+	["yinsi"] = "淫肆",
+	[":yinsi"] = "你可以将一张装备牌当【酒】使用。",
+	["chanxian"] = "谗陷",
+	[":chanxian"] = "出牌阶段，你可以将一张方片牌交给一名其他角色，该角色进行二选一：1、对其攻击范围内的另一名由你指定的角色使用一张【杀】。2.令你选择获得其一张牌或对其造成一点伤害。每阶段限一次。 ",
+
 	["diymushun"] = "穆顺",
 	["~diymushun"] = "来者原是吕布矣。",
 	["cv:diymushun"] = " ",

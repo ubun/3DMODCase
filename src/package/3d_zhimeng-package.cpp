@@ -494,6 +494,96 @@ public:
     }
 };
 
+class Yinsi: public OneCardViewAsSkill{
+public:
+    Yinsi():OneCardViewAsSkill("yinsi"){
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return Analeptic::IsAvailable(player);
+    }
+
+    virtual bool isEnabledAtResponse(const Player *player, const QString &pattern) const{
+        return pattern.contains("analeptic");
+    }
+
+    virtual bool viewFilter(const CardItem *to_select) const{
+        return to_select->getFilteredCard()->inherits("EquipCard");
+    }
+
+    virtual const Card *viewAs(CardItem *card_item) const{
+        const Card *card = card_item->getCard();
+        Analeptic *analeptic = new Analeptic(card->getSuit(), card->getNumber());
+        analeptic->setSkillName(objectName());
+        analeptic->addSubcard(card->getId());
+
+        return analeptic;
+    }
+};
+
+ChanxianCard::ChanxianCard(){
+    once = true;
+    will_throw = false;
+}
+
+bool ChanxianCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const{
+    return targets.isEmpty() && to_select != Self;
+}
+
+void ChanxianCard::onEffect(const CardEffectStruct &effect) const{
+    effect.to->obtainCard(this);
+
+    Room *room = effect.to->getRoom();
+    QString choice = room->askForChoice(effect.to, "chanxian", "slash+hsals");
+    if(choice == "slash"){
+        QList<ServerPlayer *> players = room->getOtherPlayers(effect.to), targets;
+        foreach(ServerPlayer *player, players){
+            if(effect.to->canSlash(player))
+                targets << player;
+        }
+        if(!targets.isEmpty()){
+            ServerPlayer *target = room->askForPlayerChosen(effect.from, targets, "chanxian");
+            const Card *slash = room->askForCard(effect.to, "slash", "chanxian", QVariant(), NonTrigger);
+            if(slash)
+                room->cardEffect(slash, effect.to, target);
+        }
+    }else{
+        choice = room->askForChoice(effect.from, "chanxian", "get+hit");
+        if(choice == "get"){
+            int card_id = room->askForCardChosen(effect.from, effect.to, "he", "chanxian");
+            room->obtainCard(effect.from, card_id, room->getCardPlace(card_id) != Player::Hand);
+        }
+        else{
+            DamageStruct damage;
+            damage.from = effect.from;
+            damage.to = effect.to;
+            room->damage(damage);
+        }
+    }
+}
+
+class Chanxian: public OneCardViewAsSkill{
+public:
+    Chanxian():OneCardViewAsSkill("Chanxian"){
+        default_choice = "slash";
+    }
+
+    virtual bool isEnabledAtPlay(const Player *player) const{
+        return ! player->hasUsed("ChanxianCard");
+    }
+
+    virtual bool viewFilter(const CardItem *to_select) const{
+        return to_select->getCard()->getSuit() == Card::Diamond;
+    }
+
+    virtual const Card *viewAs(CardItem *card_item) const{
+        ChanxianCard *card = new ChanxianCard;
+        card->addSubcard(card_item->getFilteredCard());
+
+        return card;
+    }
+};
+
 SanDZhimengPackage::SanDZhimengPackage()
     :Package("sand_zhimeng")
 {
@@ -526,11 +616,16 @@ SanDZhimengPackage::SanDZhimengPackage()
     diysimazhao->addSkill(new Zhaoxin);
     diysimazhao->addSkill(new Huaiyi);
 
+    General *diysunluban = new General(this, "diysunluban", "wu", 3, false);
+    diysunluban->addSkill(new Yinsi);
+    diysunluban->addSkill(new Chanxian);
+
     addMetaObject<DujiCard>();
     addMetaObject<PengriCard>();
     addMetaObject<XunguiCard>();
     addMetaObject<DaojuCard>();
     addMetaObject<ZhaoxinCard>();
+    addMetaObject<ChanxianCard>();
 }
 
 ADD_PACKAGE(SanDZhimeng)
