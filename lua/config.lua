@@ -3,7 +3,7 @@
 -- and it is a little different from config.ini
 
 config = {
-	version = "20120501",
+	version = "20120517",
 	version_name = "喊疼版",
 	mod_name = "3DMODCase",
 	kingdoms = { "wei", "shu", "wu", "qun", "god"},

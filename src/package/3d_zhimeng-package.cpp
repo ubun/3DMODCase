@@ -93,7 +93,7 @@ public:
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
 
         Room *room = player->getRoom();
-        if(player->askForSkillInvoke(objectName())){
+        if(player->askForSkillInvoke(objectName(), data)){
             LogMessage log;
             log.type = "#Liefu";
             log.from = player;
@@ -184,7 +184,7 @@ public:
         if(effect.card->isNDTrick()){
             Room *room = player->getRoom();
 
-            if(player->askForSkillInvoke(objectName())){
+            if(player->askForSkillInvoke(objectName(), data)){
                 player->drawCards(1);
                 LogMessage log;
                 log.type = "#Yaliang";
