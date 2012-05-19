@@ -59,7 +59,7 @@ public:
         if(!liru || liru->getPile("du").isEmpty())
             return false;
 
-        if(use.card->inherits("Slash") && liru->askForSkillInvoke(objectName())){
+        if(use.card->inherits("Slash") && !player->hasFlag("drank") && liru->askForSkillInvoke(objectName())){
             room->obtainCard(player, liru->getPile("du").first());
             room->setPlayerFlag(player, "drank");
             if(room->askForChoice(player, objectName(), "turn+lp") == "turn")
@@ -376,7 +376,7 @@ public:
                 new_card->setSkillName("xiaoguo");
                 new_card->addSubcard(effect.slash);
 
-                if(!effect.from->isProhibited(effect.to, new_card)){
+                if(!effect.from->isProhibited(effect.to, new_card) && !effect.to->containsTrick(name)){
                     CardUseStruct use;
                     use.card = new_card;
                     use.from = effect.from;
@@ -433,22 +433,22 @@ ZhaoxinCard::ZhaoxinCard(){
 
 void ZhaoxinCard::use(Room *room, ServerPlayer *source, const QList<ServerPlayer *> &tar) const{
     room->showAllCards(source);
-    bool same = false;
+    int samecount = 0, unsamecount = 0;
     foreach(const Card *card1, source->getHandcards()){
         foreach(const Card *card2, source->getHandcards()){
             if(card1 == card2)
                 continue;
             if(card1->getSuit() == card2->getSuit())
-                same = true;
+                samecount ++;
             else
-                same = false;
+                unsamecount ++;
         }
     }
-    if(!same){
+    if(samecount == 0){
         ServerPlayer *i = room->askForPlayerChosen(source, room->getAlivePlayers(), "zhaoxin");
         room->loseHp(i);
     }
-    else{
+    else if(unsamecount == 0){
         QList<ServerPlayer *> targets;
         foreach(ServerPlayer *i, room->getOtherPlayers(source))
             if(!i->isNude())
@@ -538,12 +538,12 @@ void ChanxianCard::onEffect(const CardEffectStruct &effect) const{
     if(choice == "slash"){
         QList<ServerPlayer *> players = room->getOtherPlayers(effect.to), targets;
         foreach(ServerPlayer *player, players){
-            if(effect.to->canSlash(player))
+            if(effect.to->canSlash(player) && player != effect.from)
                 targets << player;
         }
         if(!targets.isEmpty()){
             ServerPlayer *target = room->askForPlayerChosen(effect.from, targets, "chanxian");
-            const Card *slash = room->askForCard(effect.to, "slash", "chanxian", QVariant(), NonTrigger);
+            const Card *slash = room->askForCard(effect.to, "slash", "@chanxian:" + target->objectName(), QVariant(), NonTrigger);
             if(slash)
                 room->cardEffect(slash, effect.to, target);
         }

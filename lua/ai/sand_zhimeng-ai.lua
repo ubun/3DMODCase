@@ -46,7 +46,7 @@ local jingrui_skill={}
 jingrui_skill.name="jingrui"
 table.insert(sgs.ai_skills,jingrui_skill)
 jingrui_skill.getTurnUseCard=function(self)
-	if player:isKongcheng() or player:getHandcardNum() < player:getHp() then return end
+	if self.player:isKongcheng() or self.player:getHandcardNum() < self.player:getHp() then return end
 	local cards = self.player:getCards("h")	
 	cards=sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
@@ -92,7 +92,6 @@ yinsi_skill.getTurnUseCard=function(self)
 	assert(analeptic)
 	return analeptic
 end
-
 sgs.ai_view_as["yinsi"] = function(card, player, card_place)
 	local suit = card:getSuitString()
 	local number = card:getNumberString()

@@ -91,6 +91,19 @@ return {
 	["#ZhichiDamaged"] = "%from 受到了伤害，本回合内【杀】和非延时锦囊都将对其无效",
 	["#ZhichiAvoid"] = "%from 的锁定技【%arg】被触发，【杀】和非延时锦囊对其无效",
 
+        ["#zhonghui"] = "桀骜的野心家",
+	["zhonghui"] = "钟会",
+	["quanji"] = "权计",
+	[":quanji"] = "每当你受到1点伤害后，你可以摸一张牌，然后将一张手牌置于你的武将牌上，称为“权”；每有一张“权”，你的手牌上限便+1。",
+	["zili"] = "自立",
+	[":zili"] = "<b>觉醒技</b>，回合开始阶段开始时，若“权”的数量达到3或更多，你须减1点体力上限，然后回复1点体力或摸两张牌，并获得技能“排异”（出牌阶段，你可以将一张“权”置入弃牌堆，令一名角色摸两张牌，然后若该角色的手牌数大于你的手牌数，你对其造成1点伤害。每阶段限一次）。",
+	["#ZiliWake"] = "%from 的权的数量达到 %arg 个，触发觉醒技【%arg2】",
+	["zili:draw"] = "摸2张牌",
+	["zili:recover"] = "回复1点体力",
+	["paiyi"] = "排异",
+	[":paiyi"] = "出牌阶段，你可以将一张“权”置入弃牌堆，令一名角色摸两张牌，然后若该角色的手牌数大于你的手牌数，你对其造成1点伤害。",
+	["power"] = "权",
+		
 	["designer:caozhi"] = "foxear",
 	["designer:yujin"] = "城管无畏",
 	["designer:fazheng"] = "michael_lee",
@@ -101,6 +114,7 @@ return {
 	["designer:wuguotai"] = "章鱼咬你哦",
 	["designer:gaoshun"] = "羽柴文理",
 	["designer:chengong"] = "Kaycent",
+	["designer:zhonghui"] = "韩旭",
 
 	["cv:caozhi"] = "殆尘",
 	["$jiushi1"] = "举泰山以为肉，倾东海以为酒",
@@ -152,6 +166,7 @@ return {
 	["~xusheng"] = "盛不能奋身出命，不亦辱乎…",
 	["~xushu"] = "娘……孩儿不孝……向您……请罪……",
 	["~yujin"] = "我……无颜面对丞相了……",
+	["~zhonghui"] = "",
 
 	-- illustrator
 	["illustrator:caozhi"] = "木美人",
@@ -164,4 +179,5 @@ return {
 	["illustrator:wuguotai"] = "zoo",
 	["illustrator:chengong"] = "黑月乱",
 	["illustrator:gaoshun"] = "鄧Sir",
+	["illustrator:zhonghui"] = "雪君S",
 }
