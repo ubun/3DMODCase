@@ -544,10 +544,17 @@ void ChanxianCard::onEffect(const CardEffectStruct &effect) const{
         if(!targets.isEmpty()){
             ServerPlayer *target = room->askForPlayerChosen(effect.from, targets, "chanxian");
             const Card *slash = room->askForCard(effect.to, "slash", "@chanxian:" + target->objectName(), QVariant(), NonTrigger);
-            if(slash)
+            if(slash){
                 room->cardEffect(slash, effect.to, target);
+                return;
+            }
+            else
+                choice = "hsals";
         }
-    }else{
+        else
+            choice = "hsals";
+    }
+    if(choice == "hsals"){
         choice = room->askForChoice(effect.from, "chanxian", "get+hit");
         if(choice == "get"){
             int card_id = room->askForCardChosen(effect.from, effect.to, "he", "chanxian");
